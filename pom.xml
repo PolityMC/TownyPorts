@@ -6,7 +6,7 @@
 
     <groupId>net.euromc</groupId>
     <artifactId>TownyPorts</artifactId>
-    <version>1.0</version>
+    <version>1.0-DEV</version>
     <packaging>jar</packaging>
 
     <name>TownyPorts</name>

@@ -14,9 +14,9 @@ uses-economy: true
 #Additionally, the /setportprice and /portprice commands will be disabled too.
 #Default: true
 
-currency-sign: "$"
+currency-sign: "Gold"
 #The sign used for economy notifications or errors.
-#Default: "$"
+#Default: "Gold"
 
 minimum-port-fee: 10
 #The minimum travel fee a port can have for travellers.
