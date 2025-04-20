@@ -52,10 +52,10 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		Town destinationTown = getTownOrThrow(args[0]);
 		TownBlock tb = PortPlotUtil.getPortPlot(destinationTown);
 		WorldCoord wc = tb.getWorldCoord();
+		Location destinationLoc = getDestinationSpawnLocation(wc);
+
 		if (MathUtil.distance(TownyAPI.getInstance().getTownBlock(p.getLocation()).getWorldCoord(), wc) > 2750)
 			throw new TownyException("§c The port is too far away.");
-
-		Location destinationLoc = getDestinationSpawnLocation(wc);
 
 		if (!LocationUtil.isSafe(destinationLoc))
 			throw new TownyException("§c The destination port's location is not safe.");
@@ -151,18 +151,19 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			throw new TownyException("[TownyPorts] /port command must be run as a player.");
 		}
 
+		// Incorrect argument length
+		if (args.length == 0 || args == null){
+			throw new TownyException("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
+		}
+
 		TownyAPI townyAPI = TownyAPI.getInstance();
+
 		Player player = (Player) sender;
 		Town playerTown = townyAPI.getResident(player.getName()).getTownOrNull();
 		Nation playerNation = playerTown.getNationOrNull();
 
 		Town destinationTown = getTownOrThrow(args[0]);
 		Nation destinationNation = destinationTown.getNationOrNull();
-
-		// Incorrect argument length
-		if (args.length == 0){
-			throw new TownyException("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
-		}
 
 		// Player has no town
 		if (!townyAPI.getResident(player.getName()).hasTown()){
