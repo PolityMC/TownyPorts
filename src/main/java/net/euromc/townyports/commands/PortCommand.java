@@ -43,6 +43,9 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 	private void parsePortCommand(@NotNull CommandSender sender, @NotNull String[] args) throws TownyException {
 
+		// == Start Pre-teleport checks ==
+
+		//Command sender isnt a player
 		if (!(sender instanceof Player)) {
 			PortsMain.instance.getLogger().info("You must run this command as a Player!");
 			return;
@@ -50,33 +53,47 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		Player p = (Player) sender;
 
+		//Incorrect argument length
 		if (args.length == 0)
 			throw new TownyException("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
 
+		//Player has no town
 		if (!TownyAPI.getInstance().getResident(p.getName()).hasTown())
 			throw new TownyException("§c You do not belong to a town.");
 
+		//Player has no nation
 		Town t = TownyAPI.getInstance().getResident(p.getName()).getTownOrNull();
 		if (!t.hasNation())
 			throw new TownyException("§c You do not belong to a nation.");
 
+		//Player is in the wilderness
 		if (TownyAPI.getInstance().isWilderness(p.getLocation()))
 			throw new TownyException("§c You cannot teleport to a port from the wilderness.");
 
+		//Plot the player is standing in is not a port plot
 		if (!PortPlotUtil.isPortPlot(TownyAPI.getInstance().getTownBlock(p)))
 			throw new TownyException("§c You can only go to another port starting from a port plot.");
 
+		// Destination town does not have a nation
 		Town destinationTown = getTownOrThrow(args[0]);
 		if (!destinationTown.hasNation())
 			throw new TownyException("§c The destination town does not have a nation.");
 
+		// Block traveling to the ports of enemy nations if prevented in the config
 		if (destinationTown.getNationOrNull().hasEnemy(t.getNationOrNull())
 				&& PortsMain.getCustomConfig().getBoolean("port-travel-denies-for-enemies"))
 			throw new TownyException("§c You cannot teleport to an enemy nation's ports.");
 
+		// Destination town does not have a port plot
 		if (!PortPlotUtil.hasPortPlot(destinationTown))
 			throw new TownyException("§c That town does not have a port.");
 
+		// === End Pre-teleport checks ===
+
+
+		// Folia refactoring section below
+
+		// Calculate port distance
 		TownBlock tb = PortPlotUtil.getPortPlot(destinationTown);
 		WorldCoord wc = tb.getWorldCoord();
 		if (MathUtil.distance(TownyAPI.getInstance().getTownBlock(p.getLocation()).getWorldCoord(), wc) > 2750)
@@ -90,14 +107,21 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		final TownBlock loc = TownyAPI.getInstance().getTownBlock(p.getLocation());
 		p.sendMessage("§6[TownyPorts]§a Travelling to this port...");
 
+		// Give the player the option to accept the TP or not
 		boolean costsMoney = PortsMain.getCustomConfig().getBoolean("uses-economy");
 		if (costsMoney) {
 			p.sendMessage( PortsMain.PREFIX + "§aThis will cost "
 					+ PortsMain.instance.getConfig().getString(destinationTown.getUUID().toString())
 					+ PortsMain.getCustomConfig().getString("currency-sign") + "...");
 		}
+
+		// If the player accepts the teleport, run the teleport task
 		Confirmation.runOnAccept(() -> {
+
+			// Retrieve the cooldown
 			int cdSec = PortsMain.getCustomConfig().getInt("port-travel-cooldown-in-seconds");
+
+			// Check if the player is under cooldown
 			if (!cooldown.containsKey(p.getUniqueId()) || System.currentTimeMillis() - cooldown.get(p.getUniqueId()) > cdSec*1000) {
 				cooldown.put(p.getUniqueId(), System.currentTimeMillis());
 			} else {
@@ -105,18 +129,26 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				p.sendMessage(PortsMain.PREFIX + "§cYou need to wait another " + Math.round(cdSec - calc) + " seconds to use this command again.");
 				return;
 			}
+
+			// Get the teleport warmup and notify player
 			int warmup = PortsMain.getCustomConfig().getInt("port-travel-warmup-in-ticks");
 			int secTime = Math.round(warmup/20);
 			p.sendMessage("§6[TownyPorts]§a You accepted the costs of this trip. You will depart in §b" + secTime + " seconds§a.");
 
+			// Teleport task via Bukkit Scheduler
 			Bukkit.getScheduler().runTaskLater(PortsMain.instance, new Runnable() {
+
+
 				@Override
 				public void run() {
+
+					// Verify the player trying to teleport is not offline.
 					if (!p.isOnline()) {
 						Bukkit.getLogger().info("§f[§4ALERT§f] §e" + p.getName() + " has tried to teleport to " + destinationTown.getName() + "'s port while being offline.");
 						return;
 					}
 
+					//Verify the player can afford to complete the teleport
 					double costDouble = Double.parseDouble(PortsMain.instance.getConfig().getString(destinationTown.getUUID().toString()));
 					boolean usesEco = PortsMain.getCustomConfig().getBoolean("uses-economy");
 					if (usesEco && costsMoney && !TownyAPI.getInstance().getResident(p.getName()).getAccount().payTo(costDouble, destinationTown.getAccount(), "Travelled to Port.")) {
@@ -124,25 +156,29 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 						return;
 					}
 
+					//Ensure the player is still standing in the port plot area before teleporting
 					if (loc != TownyAPI.getInstance().getTownBlock(p.getLocation())) {
 						p.sendMessage("§6[TownyPorts]§c You have moved away from the port while waiting, teleportation denied.");
 						return;
 					}
+
+					//Complete the teleport
 					p.teleport(destinationLoc);
 					p.sendMessage("§6[TownyPorts]§a Arrived at the port.");
 				}
-			}, warmup);
+			}, warmup); //Apply warmup period before running the task
 		})
-		.runOnCancel(() -> p.sendMessage("§6[TownyPorts]§c Your trip has been canceled."))
+		.runOnCancel(() -> p.sendMessage("§6[TownyPorts]§c Your trip has been canceled.")) //If the task is canceled via return, send player message
 		.sendTo(p.getPlayer());
 
 	}
 
+	// Needs to be run in a scheduler.
 	private Location getDestinationSpawnLocation(WorldCoord wc) {
 		World world = Bukkit.getWorld(wc.getWorldName());
 		int X = wc.getX() * 16 + 8;
 		int Z = wc.getZ() * 16 + 8;
 		int safeY = world.getHighestBlockAt(X, Z).getY();
-		return world.getBlockAt(X, safeY + 1, Z).getLocation();
+		return world.getBlockAt(X, safeY + 1, Z).getLocation(); // NEEDS TO BE RUN IN GlobalRegionScheduler
 	}
 }

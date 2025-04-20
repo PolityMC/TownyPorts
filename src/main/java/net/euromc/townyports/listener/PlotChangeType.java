@@ -41,6 +41,7 @@ public class PlotChangeType implements Listener {
         @Deprecated
         String biomeName = getBiome(wc).name().toLowerCase();
 
+        //Compare each entry of eligibleBiomes to the provided biomeName
         for (String biome : eligibleBiomes) {
             if (biomeName.contains(biome))  {return true;}
         }
