@@ -34,6 +34,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
 			@NotNull String[] args) {
 		try {
+			checkTeleportEligibility(sender, args);
 			parsePortCommand(sender, args);
 		} catch (TownyException e) {
 			TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
@@ -43,57 +44,12 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 	private void parsePortCommand(@NotNull CommandSender sender, @NotNull String[] args) throws TownyException {
 
-		// == Start Pre-teleport checks ==
-
-		//Command sender isnt a player
-		if (!(sender instanceof Player)) {
-			PortsMain.instance.getLogger().info("You must run this command as a Player!");
-			return;
-		}
-
-		Player p = (Player) sender;
-
-		//Incorrect argument length
-		if (args.length == 0)
-			throw new TownyException("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
-
-		//Player has no town
-		if (!TownyAPI.getInstance().getResident(p.getName()).hasTown())
-			throw new TownyException("§c You do not belong to a town.");
-
-		//Player has no nation
-		Town t = TownyAPI.getInstance().getResident(p.getName()).getTownOrNull();
-		if (!t.hasNation())
-			throw new TownyException("§c You do not belong to a nation.");
-
-		//Player is in the wilderness
-		if (TownyAPI.getInstance().isWilderness(p.getLocation()))
-			throw new TownyException("§c You cannot teleport to a port from the wilderness.");
-
-		//Plot the player is standing in is not a port plot
-		if (!PortPlotUtil.isPortPlot(TownyAPI.getInstance().getTownBlock(p)))
-			throw new TownyException("§c You can only go to another port starting from a port plot.");
-
-		// Destination town does not have a nation
-		Town destinationTown = getTownOrThrow(args[0]);
-		if (!destinationTown.hasNation())
-			throw new TownyException("§c The destination town does not have a nation.");
-
-		// Block traveling to the ports of enemy nations if prevented in the config
-		if (destinationTown.getNationOrNull().hasEnemy(t.getNationOrNull())
-				&& PortsMain.getCustomConfig().getBoolean("port-travel-denies-for-enemies"))
-			throw new TownyException("§c You cannot teleport to an enemy nation's ports.");
-
-		// Destination town does not have a port plot
-		if (!PortPlotUtil.hasPortPlot(destinationTown))
-			throw new TownyException("§c That town does not have a port.");
-
-		// === End Pre-teleport checks ===
-
-
 		// Folia refactoring section below
 
 		// Calculate port distance
+		Player p = (Player) sender;
+		Town t = TownyAPI.getInstance().getResident(p.getName()).getTownOrNull();
+		Town destinationTown = getTownOrThrow(args[0]);
 		TownBlock tb = PortPlotUtil.getPortPlot(destinationTown);
 		WorldCoord wc = tb.getWorldCoord();
 		if (MathUtil.distance(TownyAPI.getInstance().getTownBlock(p.getLocation()).getWorldCoord(), wc) > 2750)
@@ -180,5 +136,68 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		int Z = wc.getZ() * 16 + 8;
 		int safeY = world.getHighestBlockAt(X, Z).getY();
 		return world.getBlockAt(X, safeY + 1, Z).getLocation(); // NEEDS TO BE RUN IN GlobalRegionScheduler
+	}
+
+	/* Checks all the pre-conditions required before a commandSender can be considered eligible
+	   for teleporting.
+	   Throws an exception if any of the prerequisite conditions are not met.
+	   This method should only be run from within a try catch block.
+	 */
+	private static void checkTeleportEligibility(CommandSender sender, String[] args) throws TownyException{
+
+		// Command sender isnt a player
+		if (!(sender instanceof Player)) {
+			PortsMain.instance.getLogger().info("You must run this command as a Player!");
+			throw new TownyException("[TownyPorts] /port command must be run as a player.");
+		}
+
+		TownyAPI townyAPI = TownyAPI.getInstance();
+		Player player = (Player) sender;
+		Town playerTown = townyAPI.getResident(player.getName()).getTownOrNull();
+		Nation playerNation = playerTown.getNationOrNull();
+
+		Town destinationTown = getTownOrThrow(args[0]);
+		Nation destinationNation = destinationTown.getNationOrNull();
+
+		// Incorrect argument length
+		if (args.length == 0){
+			throw new TownyException("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
+		}
+
+		// Player has no town
+		if (!townyAPI.getResident(player.getName()).hasTown()){
+			throw new TownyException("§c You do not belong to a town.");
+		}
+
+		// Player has no nation
+		if (!playerTown.hasNation()){
+			throw new TownyException("§c You do not belong to a nation.");
+		}
+
+		// Player is in the wilderness
+		if(townyAPI.isWilderness(player.getLocation())){
+			throw new TownyException("§c You cannot teleport to a port from the wilderness.");
+		}
+
+		// Destination town does not have a port plot
+		if(!PortPlotUtil.hasPortPlot(destinationTown)){
+			throw new TownyException("§c That town does not have a port.");
+		}
+
+		// Destination town does not belong to a nation
+		if(!destinationTown.hasNation()){
+			throw new TownyException("§c The destination town does not have a nation.");
+		}
+
+		// Destination town is part of an enemy nation
+		if( destinationNation.hasEnemy(playerNation) && PortsMain.getCustomConfig().getBoolean("port-travel-denies-for-enemies")){
+			throw new TownyException("§c You cannot teleport to an enemy nation's ports.");
+		}
+
+		// Destination town does not have a port plot
+		if (!PortPlotUtil.hasPortPlot(destinationTown)){
+			throw new TownyException("§c That town does not have a port.");
+		}
+
 	}
 }
