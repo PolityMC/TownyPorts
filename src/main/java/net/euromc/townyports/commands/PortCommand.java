@@ -48,14 +48,9 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		// Calculate port distance
 		Player p = (Player) sender;
-		Town t = TownyAPI.getInstance().getResident(p.getName()).getTownOrNull();
 		Town destinationTown = getTownOrThrow(args[0]);
-		TownBlock tb = PortPlotUtil.getPortPlot(destinationTown);
-		WorldCoord wc = tb.getWorldCoord();
+		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
 		Location destinationLoc = getDestinationSpawnLocation(wc);
-
-		if (MathUtil.distance(TownyAPI.getInstance().getTownBlock(p.getLocation()).getWorldCoord(), wc) > 2750)
-			throw new TownyException("§c The port is too far away.");
 
 		if (!LocationUtil.isSafe(destinationLoc))
 			throw new TownyException("§c The destination port's location is not safe.");
@@ -164,6 +159,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		Town destinationTown = getTownOrThrow(args[0]);
 		Nation destinationNation = destinationTown.getNationOrNull();
+		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
 
 		// Player has no town
 		if (!townyAPI.getResident(player.getName()).hasTown()){
@@ -198,6 +194,11 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		// Destination town does not have a port plot
 		if (!PortPlotUtil.hasPortPlot(destinationTown)){
 			throw new TownyException("§c That town does not have a port.");
+		}
+
+		// The port is too far away to travel to.
+		if (MathUtil.distance(TownyAPI.getInstance().getTownBlock(player.getLocation()).getWorldCoord(), wc) > 2750){
+			throw new TownyException("§c The port is too far away.");
 		}
 
 	}
