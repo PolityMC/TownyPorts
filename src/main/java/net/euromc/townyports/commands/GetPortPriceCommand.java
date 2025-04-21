@@ -22,6 +22,11 @@ public class GetPortPriceCommand implements CommandExecutor {
 
         Player p = (Player) sender;
 
+        if(args.length == 0){
+            p.sendMessage(PortsMain.PREFIX + "§5Correct usage: `/portprice <town-name>`");
+            return false;
+        }
+
         if (!PortsMain.getCustomConfig().getBoolean("uses-economy")) {
             p.sendMessage(PortsMain.PREFIX + "§cEconomy is disabled for TownyPorts.");
             return true;
