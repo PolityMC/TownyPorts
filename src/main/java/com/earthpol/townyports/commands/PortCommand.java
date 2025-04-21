@@ -23,8 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class PortCommand extends BaseCommand implements CommandExecutor {
@@ -236,9 +234,11 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// The port is too far away to travel to.
-		if (MathUtil.distance(Objects.requireNonNull(TownyAPI.getInstance().getTownBlock(player.getLocation())).getWorldCoord(), wc) > 2750){
+		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
+		if (MathUtil.distance(Objects.requireNonNull(TownyAPI.getInstance().getTownBlock(player.getLocation())).getWorldCoord(), wc) > portMaxDistance){
 			throw new TownyException("§c The port is too far away.");
 		}
 
 	}
+
 }
