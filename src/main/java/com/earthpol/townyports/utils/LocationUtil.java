@@ -1,4 +1,4 @@
-package net.euromc.townyports.utils;
+package com.earthpol.townyports.utils;
 
 import org.bukkit.Location;
 import org.bukkit.block.Block;

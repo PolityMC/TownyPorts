@@ -1,11 +1,11 @@
-package net.euromc.townyports.listener;
+package com.earthpol.townyports.listener;
 
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.object.TownBlock;
 
 
-import net.euromc.townyports.PortsMain;
+import com.earthpol.townyports.PortsMain;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerTeleportEvent;

@@ -1,4 +1,4 @@
-package net.euromc.townyports.listener;
+package com.earthpol.townyports.listener;
 
 import com.palmergames.bukkit.towny.TownySettings;
 import com.palmergames.bukkit.towny.event.*;

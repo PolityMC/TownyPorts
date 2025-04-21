@@ -1,13 +1,13 @@
 name: TownyPorts
 folia-supported: true
 version: '${project.version}'
-main: net.euromc.townyports.PortsMain
+main: com.earthpol.townyports.PortsMain
 api-version: '1.18'
 depend: [ Towny ]
 softdepend: [ Vault ]
 authors: [ 0xBit , darthpeti ]
 description: TownyPorts is a plugin that allows you traverse the vast distance of the world through a system of ports designated all around the Minecraft world.
-website: https://github.com/darthpeti/TownyPorts
+website: https://github.com/EarthPol
 commands:
     port:
       aliases: []

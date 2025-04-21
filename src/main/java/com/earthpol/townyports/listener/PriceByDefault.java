@@ -1,6 +1,6 @@
-package net.euromc.townyports.listener;
+package com.earthpol.townyports.listener;
 
-import net.euromc.townyports.PortsMain;
+import com.earthpol.townyports.PortsMain;
 
 import com.palmergames.bukkit.towny.event.PlotChangeTypeEvent;
 import org.bukkit.event.EventHandler;

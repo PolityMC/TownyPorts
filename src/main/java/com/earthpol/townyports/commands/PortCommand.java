@@ -1,8 +1,8 @@
-package net.euromc.townyports.commands;
+package com.earthpol.townyports.commands;
 
-import net.euromc.townyports.PortsMain;
-import net.euromc.townyports.utils.LocationUtil;
-import net.euromc.townyports.utils.PortPlotUtil;
+import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.utils.LocationUtil;
+import com.earthpol.townyports.utils.PortPlotUtil;
 
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
@@ -28,7 +28,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class PortCommand extends BaseCommand implements CommandExecutor {
-	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 	private final HashMap<UUID, Long> cooldown;
 
 	public PortCommand() {

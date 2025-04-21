@@ -1,4 +1,4 @@
-package net.euromc.townyports.commands;
+package com.earthpol.townyports.commands;
 
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.utils.NameUtil;
