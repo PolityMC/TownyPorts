@@ -1,8 +1,8 @@
-package net.euromc.townyports.commands;
+package com.earthpol.townyports.commands;
 
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.object.Town;
-import net.euromc.townyports.PortsMain;
+import com.earthpol.townyports.PortsMain;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -21,6 +21,11 @@ public class GetPortPriceCommand implements CommandExecutor {
         }
 
         Player p = (Player) sender;
+
+        if(args.length == 0){
+            p.sendMessage(PortsMain.PREFIX + "§5Correct usage: `/portprice <town-name>`");
+            return false;
+        }
 
         if (!PortsMain.getCustomConfig().getBoolean("uses-economy")) {
             p.sendMessage(PortsMain.PREFIX + "§cEconomy is disabled for TownyPorts.");

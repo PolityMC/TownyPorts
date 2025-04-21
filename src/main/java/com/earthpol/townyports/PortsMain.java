@@ -1,7 +1,7 @@
-package net.euromc.townyports;
+package com.earthpol.townyports;
 
-import net.euromc.townyports.commands.*;
-import net.euromc.townyports.listener.*;
+import com.earthpol.townyports.commands.*;
+import com.earthpol.townyports.listener.*;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;

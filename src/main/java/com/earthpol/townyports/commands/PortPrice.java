@@ -1,6 +1,6 @@
-package net.euromc.townyports.commands;
+package com.earthpol.townyports.commands;
 
-import net.euromc.townyports.PortsMain;
+import com.earthpol.townyports.PortsMain;
 import com.palmergames.bukkit.towny.TownyAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;

@@ -14,9 +14,9 @@ uses-economy: true
 #Additionally, the /setportprice and /portprice commands will be disabled too.
 #Default: true
 
-currency-sign: "$"
+currency-sign: "Gold"
 #The sign used for economy notifications or errors.
-#Default: "$"
+#Default: "Gold"
 
 minimum-port-fee: 10
 #The minimum travel fee a port can have for travellers.
@@ -30,11 +30,10 @@ default-port-fee: 50
 #The default travel fee for a port's town.
 #Default: 50
 
-maximum-port-distance-in-chunks: 200
+maximum-port-distance-in-chunks: 2750
 #The max distance a port can be from another to be travelled to.
 #WARNING: TownyPorts requires you to have 16x16 sized town blocks.
-#WARNING: MUST BE A MULTIPLE OF 20
-#Default: 200
+#Default: 2750 chunks
 
 enable-port-arrival-alert: false
 #If true, online residents of a town will be alerted whenever someone arrives at their port.

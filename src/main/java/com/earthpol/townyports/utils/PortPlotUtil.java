@@ -1,4 +1,4 @@
-package net.euromc.townyports.utils;
+package com.earthpol.townyports.utils;
 
 import java.util.Optional;
 
