@@ -189,18 +189,25 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		TownyAPI townyAPI = TownyAPI.getInstance();
 
-        Town playerTown = Objects.requireNonNull(townyAPI.getResident(player.getName())).getTownOrNull();
-        assert playerTown != null;
+		Resident playerResident = townyAPI.getResident(player.getName());
+
+		//Null check playerResident
+		if(playerResident == null){
+			throw new TownyException("§c Failed to get player Resident object. Please report this issue to a Developer.");
+		}
+
+        Town playerTown = playerResident.getTownOrNull();
+
+		// Player has no town
+		if (playerTown == null) {
+			throw new TownyException("§c You do not belong to a town.");
+		}
+
         Nation playerNation = playerTown.getNationOrNull();
 
 		Town destinationTown = getTownOrThrow(args[0]);
 		Nation destinationNation = destinationTown.getNationOrNull();
 		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
-
-		// Player has no town
-		if (!Objects.requireNonNull(townyAPI.getResident(player.getName())).hasTown()){
-			throw new TownyException("§c You do not belong to a town.");
-		}
 
 		// Player has no nation
 		if (!playerTown.hasNation()){
