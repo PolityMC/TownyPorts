@@ -55,9 +55,6 @@ public class PlotChangeType implements Listener {
         }
         return false;
 	}
-
-    // TODO: Redo biome determination
-
 }
 
 
