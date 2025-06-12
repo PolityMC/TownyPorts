@@ -28,7 +28,8 @@ public class PlotChangeType implements Listener {
             Biome.RIVER,
             Biome.FROZEN_RIVER,
             Biome.BEACH,
-            Biome.SNOWY_BEACH
+            Biome.SNOWY_BEACH,
+            Biome.STONY_SHORE
     );
 
 
