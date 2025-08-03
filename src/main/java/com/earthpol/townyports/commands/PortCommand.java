@@ -81,7 +81,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			cost = Double.parseDouble(Objects.requireNonNull(PortsMain.instance.getConfig()
                     .getString(destinationTown.getUUID().toString())));
 			p.sendMessage(PortsMain.PREFIX + "§aThis will cost " + cost
-					+ PortsMain.getCustomConfig().getString("currency-sign") + "...");
+					+ " " + PortsMain.getCustomConfig().getString("currency-sign") + "...");
 			// pre-check balance
 			double balance = Objects.requireNonNull(TownyAPI.getInstance()
                             .getResident(p.getName()))
@@ -203,7 +203,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// Player is in the wilderness
-		if(townyAPI.isWilderness(player.getLocation())){
+		if(townyAPI.isWilderness(player.getLocation()) && !player.hasPermission("townyports.bypass.wilderness")){
 			throw new TownyException("§c You cannot teleport to a port from the wilderness.");
 		}
 
@@ -226,7 +226,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		// The port is too far away to travel to.
 		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
 		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
-		if (MathUtil.distance(Objects.requireNonNull(TownyAPI.getInstance().getTownBlock(player.getLocation())).getWorldCoord(), wc) > portMaxDistance){
+		if (MathUtil.distance(Objects.requireNonNull(TownyAPI.getInstance().getTownBlock(player.getLocation())).getWorldCoord(), wc) > portMaxDistance && !player.hasPermission("townyports.bypass.distance")){
 			throw new TownyException("§c The port is too far away.");
 		}
 

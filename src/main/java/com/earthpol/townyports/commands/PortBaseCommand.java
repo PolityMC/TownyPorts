@@ -33,7 +33,6 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
             sender.sendMessage("§6[TownyPorts] §dUsage:");
             sender.sendMessage("§6/t port <town> §7- Teleport to a port");
             sender.sendMessage("§6/t port price <town> §7- View port fee");
-            sender.sendMessage("§6/t port set price <amount> §7- Set port fee for your town");
             return true;
         }
 
@@ -57,23 +56,11 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                     }
                     double fee = PortsMain.instance.getConfig().getDouble(town.getUUID().toString());
                     String sign = PortsMain.getCustomConfig().getString("currency-sign");
-                    sender.sendMessage(PortsMain.PREFIX + "§aPort fee for " + town.getName() + " is " + fee + sign);
+                    sender.sendMessage(PortsMain.PREFIX + "§aPort fee for " + town.getName() + " is " + fee + " " + sign);
                 } catch (TownyException e) {
                     TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
                 }
                 return true;
-
-            case "set":
-                if (args.length != 3 || !args[1].equalsIgnoreCase("price")) {
-                    sender.sendMessage("§6[TownyPorts] §dUsage: /t port set price <amount>");
-                    return true;
-                }
-
-                if(!sender.hasPermission("townyports.port.set")) {
-                    return true;
-                }
-
-                return new PortSetCommand().onCommand(sender, command, label, Arrays.copyOfRange(args, 2, args.length));
 
             default:
                 return new PortCommand().onCommand(sender, command, label, args);
