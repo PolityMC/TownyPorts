@@ -44,6 +44,11 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                     sender.sendMessage("§6[TownyPorts] §dUsage: /t port price <town>");
                     return true;
                 }
+
+                if(!sender.hasPermission("townyports.port.price")) {
+                    return true;
+                }
+
                 try {
                     Town town = getTownOrThrow(args[1]);
                     if (!PortPlotUtil.hasPortPlot(town)) {
@@ -63,6 +68,11 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                     sender.sendMessage("§6[TownyPorts] §dUsage: /t port set price <amount>");
                     return true;
                 }
+
+                if(!sender.hasPermission("townyports.port.set")) {
+                    return true;
+                }
+
                 return new PortSetCommand().onCommand(sender, command, label, Arrays.copyOfRange(args, 2, args.length));
 
             default:

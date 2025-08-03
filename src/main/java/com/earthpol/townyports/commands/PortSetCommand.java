@@ -50,6 +50,10 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
         String action = args[0].toLowerCase();
 
         if (action.equals("spawn")) {
+            if(!sender.hasPermission("townyports.port.set")) {
+                return true;
+            }
+
             // Set port spawn to player's exact location
             Location loc = player.getLocation();
             try {
@@ -67,6 +71,11 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
                 sender.sendMessage("§6[TownyPorts] §dUsage: /t set port price <amount>");
                 return true;
             }
+
+            if(!sender.hasPermission("townyports.port.set")) {
+                return true;
+            }
+
             if (!PortsMain.getCustomConfig().getBoolean("uses-economy")) {
                 sender.sendMessage(PortsMain.PREFIX + "§cEconomy is disabled.");
                 return true;
