@@ -67,7 +67,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		Player p = (Player) sender;
 		Town destinationTown = getTownOrThrow(args[0]);
 		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
-		Location destinationLoc = getDestinationSpawnLocation(wc);
+		Location destinationLoc = PortPlotUtil.getPortSpawnLocation(destinationTown);
 
 		if (!LocationUtil.isSafe(destinationLoc))
 			throw new TownyException("§c The destination port's location is not safe.");
@@ -100,7 +100,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 					if (!cooldown.containsKey(p.getUniqueId())
 							|| System.currentTimeMillis() - cooldown.get(p.getUniqueId()) > cdSec * 1000L
 					) {
-						cooldown.put(p.getUniqueId(), System.currentTimeMillis());
+						cooldown.put(p.getUniqueId(), Long.valueOf(System.currentTimeMillis()));
 					} else {
 						long calc = (System.currentTimeMillis() - cooldown.get(p.getUniqueId())) / 1000;
 						p.sendMessage(PortsMain.PREFIX + "§cYou need to wait another "
@@ -157,16 +157,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				})
 				.runOnCancel(() -> p.sendMessage("§6[TownyPorts]§c Your trip has been canceled."))
 				.sendTo(p);
-	}
-
-	// Synchronous helper: assume we are already on the correct region thread
-	private Location getDestinationSpawnLocation(WorldCoord wc) {
-		World world = Bukkit.getWorld(wc.getWorldName());
-		int X = wc.getX() * 16 + 8;
-		int Z = wc.getZ() * 16 + 8;
-        assert world != null;
-        int safeY = world.getHighestBlockAt(X, Z).getY();
-		return new Location(world, X, safeY + 1, Z);
 	}
 
 	/* Checks all the pre-conditions required before a commandSender can be considered eligible

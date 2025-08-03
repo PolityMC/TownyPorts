@@ -5,19 +5,13 @@ main: com.earthpol.townyports.PortsMain
 api-version: '1.18'
 depend: [ Towny ]
 softdepend: [ Vault ]
-authors: [ 0xBit , darthpeti ]
+authors: [ 0xBit , darthpeti, Bustun ]
 description: TownyPorts is a plugin that allows you traverse the vast distance of the world through a system of ports designated all around the Minecraft world.
 website: https://github.com/EarthPol
 commands:
     port:
       aliases: []
       description: TownyPorts command for teleporting to ports
-    setportprice:
-      aliases: []
-      description: Set your town's port travel fee as the mayor
-    portprice:
-      aliases: []
-      description: Get a Town's port's travel fee
     townuuid:
       aliases: []
       description: Get a town's UUID

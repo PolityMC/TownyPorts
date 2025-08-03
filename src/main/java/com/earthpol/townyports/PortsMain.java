@@ -2,6 +2,8 @@ package com.earthpol.townyports;
 
 import com.earthpol.townyports.commands.*;
 import com.earthpol.townyports.listener.*;
+import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
+import com.palmergames.bukkit.towny.object.AddonCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -44,12 +46,22 @@ public final class PortsMain extends JavaPlugin {
     }
 
     private void setupCommands() {
-        Objects.requireNonNull(getCommand("port")).setExecutor(new PortCommand());
-        Objects.requireNonNull(getCommand("port")).setTabCompleter(new PortTabCommand());
-        Objects.requireNonNull(getCommand("setportprice")).setExecutor(new PortPrice());
-        Objects.requireNonNull(getCommand("portprice")).setExecutor(new GetPortPriceCommand());
-        Objects.requireNonNull(getCommand("townuuid")).setExecutor(new TownUuid());
-        Objects.requireNonNull(getCommand("townuuid")).setTabCompleter(new PortTabCommand());
+
+        /*
+        * /t set port -- Sets Port Spawn (Tab Complete)
+        * /t port set price -- Sets Port Price (Tab Complete)
+        * /t port price <town> -- Gets Port Price (Tab Complete)
+        * /t port <town> -- Go to Port
+        * /t port -- Base Command
+         */
+
+        TownyCommandAddonAPI.addSubCommand(
+                new AddonCommand(TownyCommandAddonAPI.CommandType.TOWN, "port", new PortBaseCommand())
+        );
+
+        TownyCommandAddonAPI.addSubCommand(
+                new AddonCommand(TownyCommandAddonAPI.CommandType.TOWN_SET, "port", new PortSetCommand())
+        );
     }
 
     private void asciiText() {

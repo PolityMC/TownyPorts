@@ -37,7 +37,9 @@ public class PlotChangeType implements Listener {
     public void onPlotChangeType(PlotPreChangeTypeEvent event) {
         //Ignore non-port plot types
         if (!event.getNewType().getName().equals("port")) return;
-        
+
+        if(event.getResident().hasPermissionNode("townyports.bypass.biome")) return;
+
         if (!isEligibleBiome(event.getTownBlock())){
             event.setCancelled(true);
             event.setCancelMessage("§cYou cannot set plots to port type outside of ocean biomes.");
