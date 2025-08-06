@@ -6,10 +6,12 @@ import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.command.BaseCommand;
+import com.palmergames.bukkit.towny.exceptions.NotRegisteredException;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.AddonCommand;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
+import com.palmergames.bukkit.towny.object.TownBlock;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -53,6 +55,25 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
             if(!sender.hasPermission("townyports.port.set")) {
                 return true;
             }
+
+            TownBlock tb = TownyAPI.getInstance().getTownBlock(player.getLocation());
+            if (tb == null) {
+                TownyMessaging.sendErrorMsg(sender, "§c You must stand on your own town's port plot to set its spawn.");
+                return true;
+            }
+            try {
+                if (!tb.getTown().equals(town)) {
+                    TownyMessaging.sendErrorMsg(sender, "§c You must be in your own town to set the port spawn.");
+                    return true;
+                }
+            } catch (NotRegisteredException e) {
+                throw new RuntimeException(e);
+            }
+            if (!PortPlotUtil.isPortPlot(tb)) {
+                TownyMessaging.sendErrorMsg(sender, "§c You must stand on a port plot to set the spawn.");
+                return true;
+            }
+
 
             // Set port spawn to player's exact location
             Location loc = player.getLocation();
