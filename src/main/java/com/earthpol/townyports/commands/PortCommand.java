@@ -129,6 +129,11 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 											return;
 										}
 
+										if (loc != TownyAPI.getInstance().getTownBlock(p.getLocation())) {
+											p.sendMessage("§6[TownyPorts]§c You moved away; teleport cancelled.");
+											return;
+										}
+
 										// final balance check + withdrawal
 										if (costsMoney) {
 											boolean success = Objects.requireNonNull(TownyAPI.getInstance()
@@ -139,11 +144,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 												p.sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");
 												return;
 											}
-										}
-
-										if (loc != TownyAPI.getInstance().getTownBlock(p.getLocation())) {
-											p.sendMessage("§6[TownyPorts]§c You moved away; teleport cancelled.");
-											return;
 										}
 
 										p.teleportAsync(destinationLoc);
