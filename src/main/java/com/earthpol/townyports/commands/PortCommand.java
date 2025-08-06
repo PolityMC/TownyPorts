@@ -203,8 +203,10 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// Player is in the wilderness
-		if(townyAPI.isWilderness(player.getLocation()) && !player.hasPermission("townyports.bypass.wilderness")){
-			throw new TownyException("§c You cannot teleport to a port from the wilderness.");
+		if(!player.hasPermission("townyports.bypass.wilderness")){
+			if(townyAPI.isWilderness(player.getLocation())){
+				throw new TownyException("§c You cannot teleport to a port from the wilderness.");
+			}
 		}
 
 		// Destination town does not belong to a nation
@@ -226,7 +228,13 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		// The port is too far away to travel to.
 		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
 		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
-		if (MathUtil.distance(Objects.requireNonNull(TownyAPI.getInstance().getTownBlock(player.getLocation())).getWorldCoord(), wc) > portMaxDistance && !player.hasPermission("townyports.bypass.distance")){
+
+		Location loc = player.getLocation();
+		int originChunkX = loc.getBlockX() >> 4;
+		int originChunkZ = loc.getBlockZ() >> 4;
+		WorldCoord originWc = new WorldCoord(loc.getWorld().getName(), originChunkX, originChunkZ);
+
+		if (MathUtil.distance(originWc, wc) > portMaxDistance && !player.hasPermission("townyports.bypass.distance")){
 			throw new TownyException("§c The port is too far away.");
 		}
 

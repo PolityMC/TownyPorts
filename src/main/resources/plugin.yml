@@ -15,3 +15,16 @@ commands:
     townuuid:
       aliases: []
       description: Get a town's UUID
+permissions:
+  townyports.bypass.wilderness:
+    description: Bypass the wilderness restriction when teleporting to a port.
+    default: false
+  townyports.bypass.distance:
+    description: Bypass the maximum-distance restriction when teleporting to a port.
+    default: false
+  townyports.bypass.biome:
+    description: Allow setting port plots outside of ocean/river/beach biomes.
+    default: false
+  townyports.set.spawn:
+    description: Allow setting a custom port spawn location (via /t set port spawn).
+    default: false
