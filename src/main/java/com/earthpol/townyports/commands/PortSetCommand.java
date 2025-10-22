@@ -80,6 +80,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
             try {
                 PortPlotUtil.setPortSpawnLocation(town, loc);
                 sender.sendMessage(PortsMain.PREFIX + "§aPort spawn set to your current location.");
+                PortsMain.instance.getPortRegistry().rebuildTown(town.getUUID());
             } catch (TownyException e) {
                 TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
             }

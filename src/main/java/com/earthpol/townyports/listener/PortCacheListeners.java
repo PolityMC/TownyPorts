@@ -7,6 +7,7 @@ import com.palmergames.bukkit.towny.event.plot.changeowner.PlotClaimEvent;
 import com.palmergames.bukkit.towny.event.plot.changeowner.PlotUnclaimEvent;
 import com.palmergames.bukkit.towny.event.town.TownMergeEvent;
 import com.palmergames.bukkit.towny.object.Town;
+import com.palmergames.bukkit.towny.object.TownBlockType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
@@ -22,11 +23,21 @@ public class PortCacheListeners implements Listener {
         this.registry = registry;
     }
 
-    @EventHandler
-    public void onTownBlockTypeChange(PlotChangeTypeEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onPlotChangeType(PlotChangeTypeEvent event) {
         Town town = event.getTownBlock().getTownOrNull();
-        if (town != null)
+        if (town == null)
+            return;
+        
+        TownBlockType oldType = event.getOldType();
+        TownBlockType newType = event.getNewType();
+        boolean involvesPort =
+                (oldType != null && "port".equalsIgnoreCase(oldType.getName())) ||
+                        (newType != null && "port".equalsIgnoreCase(newType.getName()));
+
+        if (involvesPort) {
             registry.rebuildTown(town.getUUID());
+        }
     }
 
     @EventHandler
