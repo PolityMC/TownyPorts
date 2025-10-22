@@ -1,5 +1,6 @@
 package com.earthpol.townyports;
 
+import com.earthpol.townyports.cache.PortRegistry;
 import com.earthpol.townyports.commands.*;
 import com.earthpol.townyports.listener.*;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
@@ -19,6 +20,7 @@ public final class PortsMain extends JavaPlugin {
     public static PortsMain instance;
     private File customConfigFile;
     private FileConfiguration customConfig;
+    private PortRegistry portRegistry;
 
 
     public static String PREFIX;
@@ -30,6 +32,10 @@ public final class PortsMain extends JavaPlugin {
         createCustomConfig();
         loadConfig();
         asciiText();
+
+        portRegistry = new PortRegistry(this);
+        portRegistry.rebuildAsync();
+
         setupListeners();
         setupCommands();
 
@@ -43,6 +49,7 @@ public final class PortsMain extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new TownCreate(), this);
         getServer().getPluginManager().registerEvents(new PriceByDefault(), this);
         getServer().getPluginManager().registerEvents(new PlayerTeleportToPortAlert(), this);
+        getServer().getPluginManager().registerEvents(new TownMergeEventListener(), this);
     }
 
     private void setupCommands() {
@@ -114,6 +121,10 @@ public final class PortsMain extends JavaPlugin {
     public void onDisable() {
         printClean(PREFIX + "Plugin has been unloaded.");
         saveConfig();
+    }
+
+    public PortRegistry getPortRegistry() {
+        return portRegistry;
     }
 
 
