@@ -1,7 +1,6 @@
 package com.earthpol.townyports.commands;
 
 import com.earthpol.townyports.PortsMain;
-import com.earthpol.townyports.utils.LocationUtil;
 import com.earthpol.townyports.utils.PortPlotUtil;
 
 import com.palmergames.bukkit.towny.TownyAPI;
@@ -69,7 +68,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
 		Location destinationLoc = PortPlotUtil.getPortSpawnLocation(destinationTown);
 
-		if (!LocationUtil.isSafe(destinationLoc))
+		if (!com.earthpol.earthPolLib.location.LocationUtil.isSafeLocation(destinationLoc))
 			throw new TownyException("§c The destination port's location is not safe.");
 
 		final TownBlock loc = TownyAPI.getInstance().getTownBlock(p.getLocation());
