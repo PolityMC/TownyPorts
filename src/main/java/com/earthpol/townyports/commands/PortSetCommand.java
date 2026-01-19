@@ -35,11 +35,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
             return true;
         }
         Player player = (Player) sender;
-        Resident res = TownyAPI.getInstance().getResident(player.getName());
-        if (res == null || res.getTownOrNull() == null || !res.isMayor()) {
-            TownyMessaging.sendErrorMsg(sender, "Only town mayors can use this command.");
-            return true;
-        }
+        Resident res = TownyAPI.getInstance().getResident(player);
         Town town = res.getTownOrNull();
 
         if (args.length == 0) {
