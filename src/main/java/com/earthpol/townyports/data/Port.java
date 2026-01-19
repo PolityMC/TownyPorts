@@ -2,26 +2,23 @@ package com.earthpol.townyports.data;
 
 import com.palmergames.bukkit.towny.object.Town;
 import org.bukkit.Location;
+import org.jetbrains.annotations.NotNull;
 
 public record Port(
         Location location,
-        Town town,
+        @NotNull Town town,
         double portPrice
 ) {
-    // Checks if this Port is corrupt
-    // Corruption: The location or town is null. These should never be null on a Port object.
-    public boolean isCorrupt(){
-        if(location == null){
-            // log this
-            return true;
-        }
-        if(town == null){
-            // log this
-            return true;
-        }
+    // Get the String name of the town that contains this port.
+    public String getName(){ return town.getName(); }
 
-        return false;
+    @Override public @NotNull String toString(){
+        return "{" +
+                town.getName() +
+                " " +
+                "CurrentPortPrice:" + portPrice +
+                " " +
+                location.toString() +
+                "}";
     }
-
-
 }
