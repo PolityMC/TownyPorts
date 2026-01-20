@@ -38,7 +38,7 @@ public class PlotChangeType implements Listener {
         //Ignore non-port plot types
         if (!event.getNewType().getName().equals("port")) return;
 
-        if(event.getResident().hasPermissionNode("townyports.bypass.biome")) return;
+        if(event.getResident().hasPermissionNode("townyports.bypass.biome") || event.getResident().getPlayer().isOp()) return;
 
         if (!isEligibleBiome(event.getTownBlock())){
             event.setCancelled(true);
