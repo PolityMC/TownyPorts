@@ -102,7 +102,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
 
         // Permissions check
         boolean hasPermission = p.hasPermission("townyports.set.spawn") || p.isOp();
-        if(hasPermission){
+        if(!hasPermission){
             p.sendMessage("You do not have permission to set the town port.");
             return false;
         }
