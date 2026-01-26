@@ -13,6 +13,9 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class PortDAO {
 
     // Metadata keys
@@ -47,8 +50,20 @@ public final class PortDAO {
         MetaDataUtil.setLocation(town,portLocationField,location,true);
     }
 
-    public static void setPortPrice(Town town,double price){
+    public static void setPortPrice(Town town, double price){
         MetaDataUtil.setDouble(town,portPriceField,price,true);
+    }
+
+    // Returns all ports in the server
+    public static List<Port> getAllPorts(){
+        TownyAPI townyAPI = TownyAPI.getInstance();
+        List<Port> portList = new ArrayList<>();
+
+        for(Town t : townyAPI.getTowns() ){
+            Port port = getPort(t);
+            if(port != null) portList.add(port);
+        }
+        return portList;
     }
 
     // Removes port metadata fields.
