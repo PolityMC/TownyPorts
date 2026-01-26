@@ -11,6 +11,8 @@ import com.earthpol.townyports.utils.PortPlotUtil;
 
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.command.BaseCommand;
+import com.palmergames.bukkit.towny.confirmations.Confirmation;
+import com.palmergames.bukkit.towny.confirmations.ConfirmationBuilder;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.*;
 import com.palmergames.util.MathUtil;
@@ -21,6 +23,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PortCommand extends BaseCommand implements CommandExecutor {
 	private static final PlayerCooldownManager portsCooldownManager = new PlayerCooldownManager();
@@ -63,7 +67,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// ==== Teleporter configuration ======
-
 		VehicleTeleporter portsVehicleTeleporter = new VehicleTeleporter(true,true);
 
 		TeleportOutcomeHandler handler =  new TeleportOutcomeHandler();
@@ -71,14 +74,21 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				context -> {context.getPlayer().sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");}
 		);
 
+		long warmupTicks = PortsMain.getCustomConfig().getLong("port-travel-warmup-in-ticks");
+		long warmupSeconds =  warmupTicks / 20;
 		Teleporter portsTeleporter = Teleporter.builder(PortsMain.instance)
 				.setVehicleTeleporter(portsVehicleTeleporter)
 
-				.preTeleportMessage(Component.text("§6[TownyPorts]§a Travelling to this port..."))
+				.preTeleportMessage(Component.text(
+						"§6[TownyPorts]§a" +
+								" You will pay " + destinationPort.getName() +
+								" to travel to " + destinationPort.portPrice() + " in " +  warmupSeconds + " seconds." +
+								" If you move, this teleport will be cancelled."
+				))
 				.postTeleportMessage(Component.text("§6[TownyPorts]§a Arrived at the port."))
 
-				.enableWarmup(PortsMain.getCustomConfig().getLong("port-travel-warmup-in-ticks"))
-				.enableDestinationSafety()
+				.enableWarmup(warmupTicks)
+				// .enableDestinationSafety() - destination safety + vehicle teleports currently not supported in EarthPolLib
 				.disablePreTeleportMovement()
 				.setOutcomeHandler(handler)
 
@@ -93,7 +103,9 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		portsTeleporter.teleport(
 				p,
 				destinationPort.location(),
-				destinationPort.portPrice()
+				destinationPort.portPrice(),
+				destinationTown.getAccount(),
+				"TownyPorts teleport"
 		);
 		portsCooldownManager.setCooldown(p, PortsMain.getCustomConfig().getLong("port-travel-cooldown-in-seconds"));
 
