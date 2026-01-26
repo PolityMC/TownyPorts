@@ -1,7 +1,6 @@
 package com.earthpol.townyports.commands;
 
 import com.earthpol.townyports.PortsMain;
-import com.earthpol.townyports.cache.PortEntry;
 import com.earthpol.townyports.data.Port;
 import com.earthpol.townyports.data.PortDAO;
 import com.palmergames.bukkit.towny.TownyAPI;
@@ -144,28 +143,6 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
         }
 
         sender.sendMessage("§8Use §f/t port list <page> §8to view other pages.");
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return List.of("price", "list");
-        }
-        if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("price") || args[0].equalsIgnoreCase("<town>")) {
-                return filterTownNames(args[1]);
-            }
-            if (args[0].equalsIgnoreCase("list")) {
-                // Suggest only towns with active ports
-                String token = args[1].toLowerCase(Locale.ROOT);
-                return PortsMain.instance.getPortRegistry().activeTownNames().stream()
-                        .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(token))
-                        .limit(20)
-                        .collect(Collectors.toList());
-            }
-        }
-        // no suggestions for amount
-        return Collections.emptyList();
     }
 
     private List<String> filterTownNames(String token) {
