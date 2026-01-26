@@ -116,6 +116,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
         }
         if(locTownBlock.getTownOrNull() != resident.getTownOrNull()){
             p.sendMessage("You can only set the port for your own town.");
+            return false;
         }
 
         // Location safety check

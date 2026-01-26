@@ -138,7 +138,7 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
             int i = 1;
             for (Port p : ports) {
                 sender.sendMessage("   §8" + (i++) + ") §7" + p.location().getWorld().getName() +
-                        " §7§8(" + p.location().getX() + "," + p.location().getY() + "," + p.location().getZ());
+                        " §7§8(" + p.location().getBlockX() + ", " + p.location().getBlockY() + ", " + p.location().getBlockZ());
             }
         }
 
