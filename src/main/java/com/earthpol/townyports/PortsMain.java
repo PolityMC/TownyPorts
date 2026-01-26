@@ -2,7 +2,6 @@ package com.earthpol.townyports;
 
 import com.earthpol.earthPolLib.logging.EnhancedLogger;
 import com.earthpol.townyports.commands.*;
-import com.earthpol.townyports.listener.*;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
 import com.palmergames.bukkit.towny.object.AddonCommand;
 import org.bukkit.Bukkit;
@@ -47,7 +46,7 @@ public final class PortsMain extends JavaPlugin {
 
 
     private void setupListeners() {
-        getServer().getPluginManager().registerEvents(new PlotChangeType(), this);
+
     }
 
     private void setupCommands() {
