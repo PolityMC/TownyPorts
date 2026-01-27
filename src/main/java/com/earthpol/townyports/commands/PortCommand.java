@@ -1,162 +1,110 @@
 package com.earthpol.townyports.commands;
 
+import com.earthpol.earthPolLib.cooldown.PlayerCooldownManager;
+import com.earthpol.earthPolLib.teleport.TeleportOutcomeHandler;
+import com.earthpol.earthPolLib.teleport.Teleporter;
+import com.earthpol.earthPolLib.teleport.VehicleTeleporter;
 import com.earthpol.townyports.PortsMain;
-import com.earthpol.townyports.utils.LocationUtil;
-import com.earthpol.townyports.utils.PortPlotUtil;
+import com.earthpol.townyports.data.Port;
+import com.earthpol.townyports.data.PortDAO;
 
 import com.palmergames.bukkit.towny.TownyAPI;
-import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.command.BaseCommand;
-import com.palmergames.bukkit.towny.confirmations.Confirmation;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.*;
 import com.palmergames.util.MathUtil;
-import org.bukkit.Bukkit;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 public class PortCommand extends BaseCommand implements CommandExecutor {
-	private final HashMap<UUID, Long> cooldown;
+	private static final PlayerCooldownManager portsCooldownManager = new PlayerCooldownManager();
 
-	public PortCommand() {
-		this.cooldown = new HashMap<>();
-	}
+	public PortCommand() {}
 
 	@Override
 	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
 							 @NotNull String label, @NotNull String @NotNull [] args) {
-		try {
-			checkTeleportEligibility(sender, args);
 
-			Player p = (Player) sender;
-			Town destinationTown = getTownOrThrow(args[0]);
-			WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
-			World world = Objects.requireNonNull(Bukkit.getWorld(wc.getWorldName()));
-
-			// schedule all logic on the region thread for destination chunk
-			Bukkit.getRegionScheduler().execute(
-					PortsMain.instance,
-					world,
-					wc.getX(),
-					wc.getZ(),
-					() -> {
-						try {
-							parsePortCommand(sender, args);
-						} catch (TownyException e) {
-							TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
-						}
-					}
-			);
-		} catch (TownyException e) {
-			TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
+		// Command parsing
+		if(!(sender instanceof Player p)) { // Check if player
+			PortsMain.instance.getLogger().info("You must run this command as a Player!");
+			return true;
 		}
+		if (args.length == 0){ // Incorrect argument length
+			p.sendMessage("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
+			return true;
+		}
+
+		// Try to find the destination town
+		Town destinationTown;
+		try {destinationTown = getTownOrThrow(args[0]);}
+		catch (TownyException e) {
+			p.sendMessage(e.getMessage());
+			return true;
+		}
+
+		try {checkTeleportEligibility(p, destinationTown);}
+		catch (TownyException e) {
+			p.sendMessage(e.getMessage());
+			return true;
+		}
+
+		// Check if a port is set up at the destination town.
+        Port destinationPort = PortDAO.getPort(destinationTown);
+		if (destinationPort == null) {
+			p.sendMessage("This town doesn't have a port set up.");
+			return true;
+		}
+
+		// ==== Teleporter configuration ======
+		VehicleTeleporter portsVehicleTeleporter = new VehicleTeleporter(true,true);
+
+		TeleportOutcomeHandler handler =  new TeleportOutcomeHandler();
+		handler.setOnFailedUnaffordable(
+				context -> {context.getPlayer().sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");}
+		);
+
+		long warmupTicks = PortsMain.getCustomConfig().getLong("port-travel-warmup-in-ticks");
+		long warmupSeconds =  warmupTicks / 20;
+		Teleporter portsTeleporter = Teleporter.builder(PortsMain.instance)
+				.setVehicleTeleporter(portsVehicleTeleporter)
+
+				.preTeleportMessage(Component.text(
+						"§6[TownyPorts]§a" +
+								" You will pay " + destinationPort.getName() +
+								" to travel to " + destinationPort.portPrice() + " in " +  warmupSeconds + " seconds." +
+								" If you move, this teleport will be cancelled."
+				))
+				.postTeleportMessage(Component.text("§6[TownyPorts]§a Arrived at the port."))
+
+				.enableWarmup(warmupTicks)
+				// .enableDestinationSafety() - destination safety + vehicle teleports currently not supported in EarthPolLib
+				.disablePreTeleportMovement()
+				.setOutcomeHandler(handler)
+
+				.build();
+
+		// Player cooldown verification
+		if (portsCooldownManager.hasCooldown(p)){
+			p.sendMessage("TownyPorts cooldown: " + portsCooldownManager.getCooldown(p) + " seconds");
+			return true;
+		}
+
+		portsTeleporter.teleport(
+				p,
+				destinationPort.location(),
+				destinationPort.portPrice(),
+				destinationTown.getAccount(),
+				"TownyPorts teleport"
+		);
+		portsCooldownManager.setCooldown(p, PortsMain.getCustomConfig().getLong("port-travel-cooldown-in-seconds"));
+
 		return true;
-	}
-
-	private void parsePortCommand(@NotNull CommandSender sender, @NotNull String[] args) throws TownyException {
-		Player p = (Player) sender;
-		Town destinationTown = getTownOrThrow(args[0]);
-		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
-		Location destinationLoc = PortPlotUtil.getPortSpawnLocation(destinationTown);
-
-		if (!LocationUtil.isSafe(destinationLoc))
-			throw new TownyException("§c The destination port's location is not safe.");
-
-		final TownBlock loc = TownyAPI.getInstance().getTownBlock(p.getLocation());
-		p.sendMessage("§6[TownyPorts]§a Travelling to this port...");
-
-		boolean costsMoney = PortsMain.getCustomConfig().getBoolean("uses-economy");
-		double cost;
-		if (costsMoney) {
-			cost = Double.parseDouble(Objects.requireNonNull(PortsMain.instance.getConfig()
-                    .getString(destinationTown.getUUID().toString())));
-			p.sendMessage(PortsMain.PREFIX + "§aThis will cost " + cost
-					+ " " + PortsMain.getCustomConfig().getString("currency-sign") + "...");
-			// pre-check balance
-			double balance = Objects.requireNonNull(TownyAPI.getInstance()
-                            .getResident(p.getName()))
-					.getAccount()
-					.getHoldingBalance();
-			if (balance < cost) {
-				p.sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");
-				return;
-			}
-		} else {
-            cost = 0;
-        }
-
-        Confirmation.runOnAccept(() -> {
-					int cdSec = PortsMain.getCustomConfig().getInt("port-travel-cooldown-in-seconds");
-					if (!cooldown.containsKey(p.getUniqueId())
-							|| System.currentTimeMillis() - cooldown.get(p.getUniqueId()) > cdSec * 1000L
-					) {
-						cooldown.put(p.getUniqueId(), Long.valueOf(System.currentTimeMillis()));
-					} else {
-						long calc = (System.currentTimeMillis() - cooldown.get(p.getUniqueId())) / 1000;
-						p.sendMessage(PortsMain.PREFIX + "§cYou need to wait another "
-								+ Math.round(cdSec - calc) + " seconds to use this command again.");
-						return;
-					}
-
-					int warmupTicks = PortsMain.getCustomConfig().getInt("port-travel-warmup-in-ticks");
-					int secTime = Math.round(warmupTicks / 20f);
-					p.sendMessage("§6[TownyPorts]§a You accepted the costs of this trip. You will depart in §b"
-							+ secTime + " seconds§a.");
-					// send title countdown
-					p.sendTitle("Teleporting in " + secTime + "s", "", 10, secTime * 20, 10);
-
-					Bukkit.getAsyncScheduler().runDelayed(
-							PortsMain.instance,
-							task -> Bukkit.getRegionScheduler().execute(
-									PortsMain.instance,
-									destinationLoc.getWorld(),
-									wc.getX(),
-									wc.getZ(),
-									() -> {
-										if (!p.isOnline()) {
-											Bukkit.getLogger().info("§f[§4ALERT§f] §e" + p.getName()
-													+ " tried to teleport while offline.");
-											return;
-										}
-
-										if (loc != TownyAPI.getInstance().getTownBlock(p.getLocation())) {
-											p.sendMessage("§6[TownyPorts]§c You moved away; teleport cancelled.");
-											return;
-										}
-
-										// final balance check + withdrawal
-										if (costsMoney) {
-											boolean success = Objects.requireNonNull(TownyAPI.getInstance()
-                                                            .getResident(p.getName()))
-													.getAccount()
-													.payTo(cost, destinationTown.getAccount(), "Travelled to Port.");
-											if (!success) {
-												p.sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");
-												return;
-											}
-										}
-
-										p.teleportAsync(destinationLoc);
-										p.sendMessage("§6[TownyPorts]§a Arrived at the port.");
-									}
-							),
-							secTime,
-							TimeUnit.SECONDS
-					);
-
-				})
-				.runOnCancel(() -> p.sendMessage("§6[TownyPorts]§c Your trip has been canceled."))
-				.sendTo(p);
 	}
 
 	/* Checks all the pre-conditions required before a commandSender can be considered eligible
@@ -164,21 +112,9 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	   Throws an exception if any of the prerequisite conditions are not met.
 	   This method should only be run from within a try catch block.
 	 */
-	private static void checkTeleportEligibility(CommandSender sender, String[] args) throws TownyException{
-
-		// Command sender isnt a player
-		if (!(sender instanceof Player player)) {
-			PortsMain.instance.getLogger().info("You must run this command as a Player!");
-			throw new TownyException("[TownyPorts] /port command must be run as a player.");
-		}
-
-		// Incorrect argument length
-		if (args.length == 0){
-			throw new TownyException("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
-		}
+	private static void checkTeleportEligibility(Player player, @NotNull Town destinationTown) throws TownyException{
 
 		TownyAPI townyAPI = TownyAPI.getInstance();
-
 		Resident playerResident = townyAPI.getResident(player.getName());
 
 		//Null check playerResident
@@ -187,14 +123,12 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
         Town playerTown = playerResident.getTownOrNull();
-
 		// Player has no town
 		if (playerTown == null) {
 			throw new TownyException("§c You do not belong to a town.");
 		}
 
         Nation playerNation = playerTown.getNationOrNull();
-		Town destinationTown = getTownOrThrow(args[0]);
 		Nation destinationNation = destinationTown.getNationOrNull();
 
 		// Player has no nation
@@ -209,6 +143,8 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			}
 		}
 
+		// Check if player is standing in a port plot
+
 		// Destination town does not belong to a nation
 		if(!destinationTown.hasNation()){
 			throw new TownyException("§c The destination town does not have a nation.");
@@ -221,13 +157,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// Destination town does not have a port plot
-		if (!PortPlotUtil.hasPortPlot(destinationTown)){
+		Port townPort = PortDAO.getPort(destinationTown);
+		if (townPort == null) {
 			throw new TownyException("§c That town does not have a port.");
 		}
 
 		// The port is too far away to travel to.
 		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
-		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
+		WorldCoord wc = townyAPI.getTownBlock(townPort.location()).getWorldCoord();
 
 		Location loc = player.getLocation();
 		int originChunkX = loc.getBlockX() >> 4;
