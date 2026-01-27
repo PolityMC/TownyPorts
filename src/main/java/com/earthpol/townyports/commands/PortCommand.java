@@ -7,12 +7,9 @@ import com.earthpol.earthPolLib.teleport.VehicleTeleporter;
 import com.earthpol.townyports.PortsMain;
 import com.earthpol.townyports.data.Port;
 import com.earthpol.townyports.data.PortDAO;
-import com.earthpol.townyports.utils.PortPlotUtil;
 
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.command.BaseCommand;
-import com.palmergames.bukkit.towny.confirmations.Confirmation;
-import com.palmergames.bukkit.towny.confirmations.ConfirmationBuilder;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.*;
 import com.palmergames.util.MathUtil;
@@ -45,15 +42,15 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			return true;
 		}
 
-		try {checkTeleportEligibility(p, args);}
+		// Try to find the destination town
+		Town destinationTown;
+		try {destinationTown = getTownOrThrow(args[0]);}
 		catch (TownyException e) {
 			p.sendMessage(e.getMessage());
 			return true;
 		}
 
-		// Try to find the destination town
-        Town destinationTown;
-        try {destinationTown = getTownOrThrow(args[0]);}
+		try {checkTeleportEligibility(p, destinationTown);}
 		catch (TownyException e) {
 			p.sendMessage(e.getMessage());
 			return true;
@@ -117,7 +114,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	   Throws an exception if any of the prerequisite conditions are not met.
 	   This method should only be run from within a try catch block.
 	 */
-	private static void checkTeleportEligibility(Player player, String[] args) throws TownyException{
+	private static void checkTeleportEligibility(Player player, @NotNull Town destinationTown) throws TownyException{
 
 		TownyAPI townyAPI = TownyAPI.getInstance();
 		Resident playerResident = townyAPI.getResident(player.getName());
@@ -134,7 +131,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
         Nation playerNation = playerTown.getNationOrNull();
-		Town destinationTown = getTownOrThrow(args[0]);
 		Nation destinationNation = destinationTown.getNationOrNull();
 
 		// Player has no nation
@@ -163,13 +159,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// Destination town does not have a port plot
-		if (!PortPlotUtil.hasPortPlot(destinationTown)){
+		Port townPort = PortDAO.getPort(destinationTown);
+		if (townPort == null) {
 			throw new TownyException("§c That town does not have a port.");
 		}
 
 		// The port is too far away to travel to.
 		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
-		WorldCoord wc = PortPlotUtil.getPortPlot(destinationTown).getWorldCoord();
+		WorldCoord wc = townyAPI.getTownBlock(townPort.location()).getWorldCoord();
 
 		Location loc = player.getLocation();
 		int originChunkX = loc.getBlockX() >> 4;

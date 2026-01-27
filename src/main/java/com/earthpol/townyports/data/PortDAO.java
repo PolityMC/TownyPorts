@@ -1,16 +1,12 @@
 package com.earthpol.townyports.data;
 
-import com.earthpol.earthPolLib.location.LocationUtil;
 import com.earthpol.townyports.PortsMain;
 import com.palmergames.bukkit.towny.TownyAPI;
-import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.metadata.DecimalDataField;
 import com.palmergames.bukkit.towny.object.metadata.LocationDataField;
 import com.palmergames.bukkit.towny.utils.MetaDataUtil;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
