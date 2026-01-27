@@ -1,12 +1,13 @@
 package com.earthpol.townyports.commands;
 
+import com.earthpol.earthPolLib.location.LocationUtil;
 import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.data.PortDAO;
 import com.earthpol.townyports.utils.PortPlotUtil;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.command.BaseCommand;
-import com.palmergames.bukkit.towny.exceptions.NotRegisteredException;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.AddonCommand;
 import com.palmergames.bukkit.towny.object.Resident;
@@ -29,17 +30,14 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String[] args) {
-        // Ensure in-game and mayor
+
+        // Ensure in-game
         if (!(sender instanceof Player)) {
             TownyMessaging.sendErrorMsg(sender, "This command can only be used in-game.");
             return true;
         }
         Player player = (Player) sender;
-        Resident res = TownyAPI.getInstance().getResident(player.getName());
-        if (res == null || res.getTownOrNull() == null || !res.isMayor()) {
-            TownyMessaging.sendErrorMsg(sender, "Only town mayors can use this command.");
-            return true;
-        }
+        Resident res = TownyAPI.getInstance().getResident(player);
         Town town = res.getTownOrNull();
 
         if (args.length == 0) {
@@ -52,38 +50,12 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
         String action = args[0].toLowerCase();
 
         if (action.equals("spawn")) {
-            if(!sender.hasPermission("townyports.port.set")) {
-                return true;
-            }
-
-            TownBlock tb = TownyAPI.getInstance().getTownBlock(player.getLocation());
-            if (tb == null) {
-                TownyMessaging.sendErrorMsg(sender, "§c You must stand on your own town's port plot to set its spawn.");
-                return true;
-            }
-            try {
-                if (!tb.getTown().equals(town)) {
-                    TownyMessaging.sendErrorMsg(sender, "§c You must be in your own town to set the port spawn.");
-                    return true;
-                }
-            } catch (NotRegisteredException e) {
-                throw new RuntimeException(e);
-            }
-            if (!PortPlotUtil.isPortPlot(tb)) {
-                TownyMessaging.sendErrorMsg(sender, "§c You must stand on a port plot to set the spawn.");
-                return true;
-            }
-
-
-            // Set port spawn to player's exact location
             Location loc = player.getLocation();
-            try {
-                PortPlotUtil.setPortSpawnLocation(town, loc);
-                sender.sendMessage(PortsMain.PREFIX + "§aPort spawn set to your current location.");
-                PortsMain.instance.getPortRegistry().rebuildTown(town.getUUID());
-            } catch (TownyException e) {
-                TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
-            }
+
+            if(!canSetPort(loc,player)){return true;}
+
+            PortDAO.setPortSpawn(town,player.getLocation());
+            sender.sendMessage(PortsMain.PREFIX + "§aPort spawn set to your current location.");
             return true;
         }
 
@@ -94,14 +66,6 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
                 return true;
             }
 
-            if(!sender.hasPermission("townyports.port.set")) {
-                return true;
-            }
-
-            if (!PortsMain.getCustomConfig().getBoolean("uses-economy")) {
-                sender.sendMessage(PortsMain.PREFIX + "§cEconomy is disabled.");
-                return true;
-            }
             double fee;
             try {
                 fee = Double.parseDouble(args[1]);
@@ -109,15 +73,12 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
                 sender.sendMessage(PortsMain.PREFIX + "§cInvalid number: " + args[1]);
                 return true;
             }
-            int max = PortsMain.getCustomConfig().getInt("maximum-port-fee");
-            if (fee < 0 || fee > max) {
-                sender.sendMessage(PortsMain.PREFIX + "§cFee must be between 0 and " + max + ".");
-                return true;
-            }
-            String uuid = town.getUUID().toString();
-            PortsMain.instance.getConfig().set(uuid, (Object) fee);
-            PortsMain.instance.saveConfig();
-            sender.sendMessage(PortsMain.PREFIX + "§aPort fee for " + town.getName() + " set to " + fee + PortsMain.getCustomConfig().getString("currency-sign") + ".");
+
+            if(!canSetPortPrice(player,fee)){return true;}
+            PortDAO.setPortPrice(town,fee);
+            sender.sendMessage(PortsMain.PREFIX + "§aPort fee for "
+                    + town.getName() +
+                    " set to " + fee + PortsMain.getCustomConfig().getString("currency-sign") + ".");
             return true;
         }
 
@@ -126,5 +87,70 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
         sender.sendMessage("§6/t set port price <amount>");
         sender.sendMessage("§6/t set port spawn");
         return true;
+    }
+
+    // Handles player facing permissions checks and error messaging.
+    private static boolean canSetPort(@NotNull Location loc, @NotNull Player p) {
+        Resident resident = TownyAPI.getInstance().getResident(p);
+        if (resident == null) {throw new NullPointerException(p.getName() + " towny resident is null.");}
+
+        //Townless check
+        if(!resident.hasTown()){
+            p.sendMessage("You must have a town to set a town port.");
+            return false;
+        }
+
+        // Permissions check
+        boolean hasPermission = p.hasPermission("townyports.set.spawn") || p.isOp();
+        if(!hasPermission){
+            p.sendMessage("You do not have permission to set the town port.");
+            return false;
+        }
+
+        // Location check
+        // The townblock at the target location must be a part of your own town.
+        TownBlock locTownBlock = TownyAPI.getInstance().getTownBlock(p);
+        if(locTownBlock == null){
+            p.sendMessage("This location has no associated townblock.");
+            return false;
+        }
+        if(locTownBlock.getTownOrNull() != resident.getTownOrNull()){
+            p.sendMessage("You can only set the port for your own town.");
+            return false;
+        }
+
+        // Location safety check
+        if(!LocationUtil.isSafeLocation(loc)) {
+            p.sendMessage("This location is not safe.");
+            return false;
+        }
+
+        return true;
+
+    }
+
+    // Handles player facing permissions checks and error messaging.
+    private static boolean canSetPortPrice(Player p, double price){
+
+        // Permission check
+        boolean hasPermission = p.hasPermission("townyports.set.spawn") || p.isOp();
+        if(hasPermission) {
+            p.sendMessage("You do not have permission to set the town port price.");
+            return false;
+        }
+
+        if (!PortsMain.getCustomConfig().getBoolean("uses-economy")) {
+            p.sendMessage(PortsMain.PREFIX + "§cEconomy is disabled.");
+            return false;
+        }
+
+        int max = PortsMain.getCustomConfig().getInt("maximum-port-fee");
+        if (price < 0 || price > max) {
+            p.sendMessage(PortsMain.PREFIX + "§cFee must be between 0 and " + max + ".");
+            return false;
+        }
+
+        return true;
+
     }
 }

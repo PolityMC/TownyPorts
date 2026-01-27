@@ -1,8 +1,7 @@
 package com.earthpol.townyports;
 
-import com.earthpol.townyports.cache.PortRegistry;
+import com.earthpol.earthPolLib.logging.EnhancedLogger;
 import com.earthpol.townyports.commands.*;
-import com.earthpol.townyports.listener.*;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
 import com.palmergames.bukkit.towny.object.AddonCommand;
 import org.bukkit.Bukkit;
@@ -13,14 +12,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Objects;
 
 public final class PortsMain extends JavaPlugin {
 
     public static PortsMain instance;
     private File customConfigFile;
     private FileConfiguration customConfig;
-    private PortRegistry portRegistry;
+
+    private static EnhancedLogger logger;
+    private static EnhancedLogger log() {return logger;}
 
 
     public static String PREFIX;
@@ -29,12 +29,14 @@ public final class PortsMain extends JavaPlugin {
     public void onEnable() {
         instance = this;
         PREFIX = "§6[TownyPorts]§r ";
+
+        // Logger
+        logger = EnhancedLogger.create(this, PREFIX,true);
+        log().getLogRetentionTask().startNow();
+
         createCustomConfig();
         loadConfig();
         asciiText();
-
-        portRegistry = new PortRegistry(this);
-        portRegistry.rebuildAsync();
 
         setupListeners();
         setupCommands();
@@ -44,12 +46,7 @@ public final class PortsMain extends JavaPlugin {
 
 
     private void setupListeners() {
-        getServer().getPluginManager().registerEvents(new PlotChangeType(), this);
-        getServer().getPluginManager().registerEvents(new AlreadyHavePort(), this);
-        getServer().getPluginManager().registerEvents(new TownCreate(), this);
-        getServer().getPluginManager().registerEvents(new PriceByDefault(), this);
-        getServer().getPluginManager().registerEvents(new PlayerTeleportToPortAlert(), this);
-        getServer().getPluginManager().registerEvents(new TownMergeEventListener(), this);
+
     }
 
     private void setupCommands() {
@@ -122,12 +119,6 @@ public final class PortsMain extends JavaPlugin {
         printClean(PREFIX + "Plugin has been unloaded.");
         saveConfig();
     }
-
-    public PortRegistry getPortRegistry() {
-        return portRegistry;
-    }
-
-
 
     public void loadConfig() {
         instance.getConfig().options().copyDefaults(false);
