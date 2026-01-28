@@ -20,7 +20,9 @@ public final class PortDAO {
     private static final DecimalDataField portPriceField = new DecimalDataField("townyPorts_portPrice");
 
     // Return a Port object built from the corresponding Towny metadata fields.
-    public static @Nullable Port getPort(Town town){
+    public static @Nullable Port getPort(@Nullable Town town){
+
+        if(town == null) return null;
 
         // If the port location metadata is missing, then return null port.
         if (!MetaDataUtil.hasMeta(town,portLocationField)) return null;
