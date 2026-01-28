@@ -92,7 +92,7 @@
         <dependency>
             <groupId>com.github.earthpol</groupId>
             <artifactId>earthpollib</artifactId>
-            <version>1.10.2</version>
+            <version>1.10.3</version>
         </dependency>
     </dependencies>
 </project>

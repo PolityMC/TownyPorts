@@ -2,8 +2,6 @@ package com.earthpol.townyports.config;
 
 import com.earthpol.earthPolLib.config.ReloadableConfigNode;
 import com.earthpol.earthPolLib.config.ReloadableConfiguration;
-import com.earthpol.earthPolLib.config.SectionHeaderNode;
-import com.palmergames.bukkit.towny.object.Town;
 
 public enum Config implements ReloadableConfiguration {
 

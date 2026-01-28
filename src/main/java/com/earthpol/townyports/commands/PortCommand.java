@@ -1,6 +1,7 @@
 package com.earthpol.townyports.commands;
 
 import com.earthpol.earthPolLib.cooldown.PlayerCooldownManager;
+import com.earthpol.earthPolLib.entity.vehicle.VehicleUtil;
 import com.earthpol.earthPolLib.teleport.TeleportOutcomeHandler;
 import com.earthpol.earthPolLib.teleport.Teleporter;
 import com.earthpol.earthPolLib.teleport.VehicleTeleporter;
@@ -9,6 +10,7 @@ import com.earthpol.townyports.config.Config;
 import com.earthpol.townyports.data.Port;
 import com.earthpol.townyports.data.PortDAO;
 
+import com.earthpol.townyports.registry.VehicleRegistry;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.command.BaseCommand;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
@@ -20,6 +22,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Vehicle;
 import org.jetbrains.annotations.NotNull;
 
 public class PortCommand extends BaseCommand implements CommandExecutor {
@@ -62,6 +65,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			return true;
 		}
 
+		// Check if the player is riding a permitted vehicle type
+		if(VehicleUtil.isOnboardVehicle(p)){
+			if(!VehicleRegistry.isAllowedVehicle((Vehicle) p.getVehicle())){
+				p.sendMessage("You can't teleport while riding this vehicle.");
+				return true;
+			}
+		}
+
 		// ==== Teleporter configuration ======
 		VehicleTeleporter portsVehicleTeleporter = new VehicleTeleporter(true,true);
 
@@ -84,7 +95,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				.postTeleportMessage(Component.text("§6[TownyPorts]§a Arrived at the port."))
 
 				.enableWarmup(warmupTicks)
-				// .enableDestinationSafety() - destination safety + vehicle teleports currently not supported in EarthPolLib
+				.enableDestinationSafety()
 				.disablePreTeleportMovement()
 				.setOutcomeHandler(handler)
 
