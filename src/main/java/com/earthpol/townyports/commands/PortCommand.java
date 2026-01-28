@@ -5,6 +5,7 @@ import com.earthpol.earthPolLib.teleport.TeleportOutcomeHandler;
 import com.earthpol.earthPolLib.teleport.Teleporter;
 import com.earthpol.earthPolLib.teleport.VehicleTeleporter;
 import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.config.Config;
 import com.earthpol.townyports.data.Port;
 import com.earthpol.townyports.data.PortDAO;
 
@@ -69,7 +70,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				context -> {context.getPlayer().sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");}
 		);
 
-		long warmupTicks = PortsMain.getCustomConfig().getLong("port-travel-warmup-in-ticks");
+		long warmupTicks = Config.PORT_TRAVEL_WARMUP_IN_TICKS.getLong();
 		long warmupSeconds =  warmupTicks / 20;
 		Teleporter portsTeleporter = Teleporter.builder(PortsMain.instance)
 				.setVehicleTeleporter(portsVehicleTeleporter)
@@ -102,7 +103,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				destinationTown.getAccount(),
 				"TownyPorts teleport"
 		);
-		portsCooldownManager.setCooldown(p, PortsMain.getCustomConfig().getLong("port-travel-cooldown-in-seconds"));
+		portsCooldownManager.setCooldown(p, Config.PORT_TRAVEL_COOLDOWN_IN_SECONDS.getLong());
 
 		return true;
 	}
@@ -152,7 +153,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		// Destination town is part of an enemy nation
         assert destinationNation != null;
-        if( destinationNation.hasEnemy(playerNation) && PortsMain.getCustomConfig().getBoolean("port-travel-denies-for-enemies")){
+        if( destinationNation.hasEnemy(playerNation) && Config.PORT_TRAVEL_DENIES_FOR_ENEMIES.getBool()){
 			throw new TownyException("§c You cannot teleport to an enemy nation's ports.");
 		}
 
@@ -163,7 +164,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// The port is too far away to travel to.
-		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
+		int portMaxDistance = Config.MAXIMUM_PORT_DISTANCE_IN_CHUNKS.getInt();
 		WorldCoord wc = townyAPI.getTownBlock(townPort.location()).getWorldCoord();
 
 		Location loc = player.getLocation();

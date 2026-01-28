@@ -1,6 +1,7 @@
 package com.earthpol.townyports.data;
 
 import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.config.Config;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.metadata.DecimalDataField;
@@ -27,7 +28,7 @@ public final class PortDAO {
         // If there is no price metadata, the price will just be whatever the default price is.
         double portPrice;
         if (!MetaDataUtil.hasMeta(town,portPriceField)){
-            portPrice = PortsMain.getCustomConfig().getDouble("default-port-fee");
+            portPrice = Config.DEFAULT_PORT_FEE.getInt();
         }
         else portPrice = MetaDataUtil.getDouble(town,portPriceField);
 

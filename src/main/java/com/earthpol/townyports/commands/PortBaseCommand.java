@@ -1,6 +1,7 @@
 package com.earthpol.townyports.commands;
 
 import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.config.Config;
 import com.earthpol.townyports.data.Port;
 import com.earthpol.townyports.data.PortDAO;
 import com.palmergames.bukkit.towny.TownyAPI;
@@ -15,8 +16,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.earthpol.townyports.PortsMain.log;
 
 public class PortBaseCommand extends BaseCommand implements CommandExecutor, TabCompleter {
 
@@ -74,13 +78,13 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                 return true;
             }
 
-            case "price":
+            case "price": {
                 if (args.length != 2) {
                     sender.sendMessage("§6[TownyPorts] §dUsage: /t port price <town>");
                     return true;
                 }
 
-                if(!sender.hasPermission("townyports.port.price")) {
+                if (!sender.hasPermission("townyports.port.price")) {
                     return true;
                 }
 
@@ -92,12 +96,28 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                         return true;
                     }
                     double fee = port.portPrice();
-                    String sign = PortsMain.getCustomConfig().getString("currency-sign");
+                    String sign = Config.CURRENCY_SIGN.getString();
                     sender.sendMessage(PortsMain.PREFIX + "§aPort fee for " + port.getName() + " is " + fee + " " + sign);
                 } catch (TownyException e) {
                     TownyMessaging.sendErrorMsg(sender, e.getMessage(sender));
                 }
                 return true;
+            }
+
+            // Require OP or permission to run reload command
+            case "reload": {
+                // Check permission to reload
+                boolean hasPermission = sender.hasPermission("townyports.reload") || sender.isOp();
+                if (!hasPermission) {return true;}
+
+                try {PortsMain.getReloadableConfigHandler().reload();}
+                catch (IOException e) {
+                    sender.sendMessage(e.getMessage());
+                    log().severe(e.getMessage(),e);
+                    return true;
+                }
+
+            }
 
             default:
                 return new PortCommand().onCommand(sender, command, label, args);
@@ -105,7 +125,7 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
     }
 
     private void listAllActivePorts(CommandSender sender, int page) {
-        String sign = PortsMain.getCustomConfig().getString("currency-sign", "");
+        String sign = Config.CURRENCY_SIGN.getString();
         List<Port> all = PortDAO.getAllPorts();
 
         if (all.isEmpty()) {
@@ -151,4 +171,6 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                 .filter(n -> n.toLowerCase().startsWith(token.toLowerCase()))
                 .collect(Collectors.toList());
     }
+
+
 }

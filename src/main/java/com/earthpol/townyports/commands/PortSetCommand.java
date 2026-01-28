@@ -2,6 +2,7 @@ package com.earthpol.townyports.commands;
 
 import com.earthpol.earthPolLib.location.LocationUtil;
 import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.config.Config;
 import com.earthpol.townyports.data.PortDAO;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
@@ -76,7 +77,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
             PortDAO.setPortPrice(town,fee);
             sender.sendMessage(PortsMain.PREFIX + "§aPort fee for "
                     + town.getName() +
-                    " set to " + fee + PortsMain.getCustomConfig().getString("currency-sign") + ".");
+                    " set to " + fee + Config.CURRENCY_SIGN.getString() + ".");
             return true;
         }
 
@@ -137,12 +138,12 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
             return false;
         }
 
-        if (!PortsMain.getCustomConfig().getBoolean("uses-economy")) {
+        if (!Config.USES_ECONOMY.getBool()) {
             p.sendMessage(PortsMain.PREFIX + "§cEconomy is disabled.");
             return false;
         }
 
-        int max = PortsMain.getCustomConfig().getInt("maximum-port-fee");
+        int max = Config.MAXIMUM_PORT_FEE.getInt();
         if (price < 0 || price > max) {
             p.sendMessage(PortsMain.PREFIX + "§cFee must be between 0 and " + max + ".");
             return false;
