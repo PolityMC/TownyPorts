@@ -25,6 +25,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Vehicle;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Map;
+
 public class PortCommand extends BaseCommand implements CommandExecutor {
 	private static final PlayerCooldownManager portsCooldownManager = new PlayerCooldownManager();
 
@@ -40,7 +42,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			return true;
 		}
 		if (args.length == 0){ // Incorrect argument length
-			p.sendMessage("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
+			p.sendMessage("§6[TownyPorts]§d Correct usage: `/t port <destination-town>`.");
 			return true;
 		}
 
@@ -141,7 +143,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
         Nation playerNation = playerTown.getNationOrNull();
-		Nation destinationNation = destinationTown.getNationOrNull();
 
 		// Player has no nation
 		if (!playerTown.hasNation()){
@@ -155,16 +156,10 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			}
 		}
 
-		// Check if player is standing in a port plot
-
-		// Destination town does not belong to a nation
-		if(!destinationTown.hasNation()){
-			throw new TownyException("§c The destination town does not have a nation.");
-		}
-
 		// Destination town is part of an enemy nation
-        assert destinationNation != null;
-        if( destinationNation.hasEnemy(playerNation) && Config.PORT_TRAVEL_DENIES_FOR_ENEMIES.getBool()){
+		Nation destinationNation = destinationTown.getNationOrNull();
+        if( destinationNation != null &&
+				(destinationNation.hasEnemy(playerNation) && Config.PORT_TRAVEL_DENIES_FOR_ENEMIES.getBool()) ){
 			throw new TownyException("§c You cannot teleport to an enemy nation's ports.");
 		}
 
@@ -187,6 +182,39 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			throw new TownyException("§c The port is too far away.");
 		}
 
+		// Is the player standing in a chunk that has a port plot in it
+		if(!isPlayerStandingInPortChunk(player)){
+			throw new TownyException("You must be standing in the same chunk as a port spawn.");
+		}
+
+
 	}
+
+	public static boolean isPlayerStandingInPortChunk(Player p){
+		TownyAPI townyAPI = TownyAPI.getInstance();
+		WorldCoord playerWorldCoord = WorldCoord.parseWorldCoord(p.getLocation());
+
+		// Get the town the player is standing in
+		Town townPlayerIsStandingIn = townyAPI.getTownOrNull(townyAPI.getTownBlock(playerWorldCoord));
+		if (townPlayerIsStandingIn == null) {
+			// Player is standing outside of a town. There is no port here, return false.
+			return false;
+		}
+
+		// Get the port of the town the player is standing in
+		Port townPort = PortDAO.getPort(townPlayerIsStandingIn);
+		if (townPort == null) {
+			// The town the player is standing in has no port. Return false.
+			return false;
+		}
+
+		// Get the worldcoord of the town's port
+		WorldCoord portWorldCoord = WorldCoord.parseWorldCoord(townPort.location());
+		if(playerWorldCoord.equals(portWorldCoord)){return true;}
+		else return false;
+	}
+
+
+
 
 }
