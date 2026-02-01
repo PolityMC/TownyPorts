@@ -1,13 +1,16 @@
 package com.earthpol.townyports.commands;
 
 import com.earthpol.earthPolLib.cooldown.PlayerCooldownManager;
+import com.earthpol.earthPolLib.entity.vehicle.VehicleUtil;
 import com.earthpol.earthPolLib.teleport.TeleportOutcomeHandler;
 import com.earthpol.earthPolLib.teleport.Teleporter;
 import com.earthpol.earthPolLib.teleport.VehicleTeleporter;
 import com.earthpol.townyports.PortsMain;
+import com.earthpol.townyports.config.Config;
 import com.earthpol.townyports.data.Port;
 import com.earthpol.townyports.data.PortDAO;
 
+import com.earthpol.townyports.registry.VehicleRegistry;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.command.BaseCommand;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
@@ -19,7 +22,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Vehicle;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Map;
 
 public class PortCommand extends BaseCommand implements CommandExecutor {
 	private static final PlayerCooldownManager portsCooldownManager = new PlayerCooldownManager();
@@ -36,7 +42,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			return true;
 		}
 		if (args.length == 0){ // Incorrect argument length
-			p.sendMessage("§6[TownyPorts]§d Correct usage: `/port <destination-town>`.");
+			p.sendMessage("§6[TownyPorts]§d Correct usage: `/t port <destination-town>`.");
 			return true;
 		}
 
@@ -61,6 +67,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			return true;
 		}
 
+		// Check if the player is riding a permitted vehicle type
+		if(VehicleUtil.isOnboardVehicle(p)){
+			if(!VehicleRegistry.isAllowedVehicle((Vehicle) p.getVehicle())){
+				p.sendMessage("You can't teleport while riding this vehicle.");
+				return true;
+			}
+		}
+
 		// ==== Teleporter configuration ======
 		VehicleTeleporter portsVehicleTeleporter = new VehicleTeleporter(true,true);
 
@@ -69,7 +83,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				context -> {context.getPlayer().sendMessage("§6[TownyPorts]§c You cannot afford to travel to this port");}
 		);
 
-		long warmupTicks = PortsMain.getCustomConfig().getLong("port-travel-warmup-in-ticks");
+		long warmupTicks = Config.PORT_TRAVEL_WARMUP_IN_TICKS.getLong();
 		long warmupSeconds =  warmupTicks / 20;
 		Teleporter portsTeleporter = Teleporter.builder(PortsMain.instance)
 				.setVehicleTeleporter(portsVehicleTeleporter)
@@ -83,7 +97,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				.postTeleportMessage(Component.text("§6[TownyPorts]§a Arrived at the port."))
 
 				.enableWarmup(warmupTicks)
-				// .enableDestinationSafety() - destination safety + vehicle teleports currently not supported in EarthPolLib
+				.enableDestinationSafety()
 				.disablePreTeleportMovement()
 				.setOutcomeHandler(handler)
 
@@ -102,7 +116,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				destinationTown.getAccount(),
 				"TownyPorts teleport"
 		);
-		portsCooldownManager.setCooldown(p, PortsMain.getCustomConfig().getLong("port-travel-cooldown-in-seconds"));
+		portsCooldownManager.setCooldown(p, Config.PORT_TRAVEL_COOLDOWN_IN_SECONDS.getLong());
 
 		return true;
 	}
@@ -129,7 +143,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
         Nation playerNation = playerTown.getNationOrNull();
-		Nation destinationNation = destinationTown.getNationOrNull();
 
 		// Player has no nation
 		if (!playerTown.hasNation()){
@@ -143,16 +156,10 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			}
 		}
 
-		// Check if player is standing in a port plot
-
-		// Destination town does not belong to a nation
-		if(!destinationTown.hasNation()){
-			throw new TownyException("§c The destination town does not have a nation.");
-		}
-
 		// Destination town is part of an enemy nation
-        assert destinationNation != null;
-        if( destinationNation.hasEnemy(playerNation) && PortsMain.getCustomConfig().getBoolean("port-travel-denies-for-enemies")){
+		Nation destinationNation = destinationTown.getNationOrNull();
+        if( destinationNation != null &&
+				(destinationNation.hasEnemy(playerNation) && Config.PORT_TRAVEL_DENIES_FOR_ENEMIES.getBool()) ){
 			throw new TownyException("§c You cannot teleport to an enemy nation's ports.");
 		}
 
@@ -163,7 +170,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		// The port is too far away to travel to.
-		int portMaxDistance = PortsMain.getCustomConfig().getInt("maximum-port-distance-in-chunks");
+		int portMaxDistance = Config.MAXIMUM_PORT_DISTANCE_IN_CHUNKS.getInt();
 		WorldCoord wc = townyAPI.getTownBlock(townPort.location()).getWorldCoord();
 
 		Location loc = player.getLocation();
@@ -175,6 +182,39 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			throw new TownyException("§c The port is too far away.");
 		}
 
+		// Is the player standing in a chunk that has a port plot in it
+		if(!isPlayerStandingInPortChunk(player)){
+			throw new TownyException("You must be standing in the same chunk as a port spawn.");
+		}
+
+
 	}
+
+	public static boolean isPlayerStandingInPortChunk(Player p){
+		TownyAPI townyAPI = TownyAPI.getInstance();
+		WorldCoord playerWorldCoord = WorldCoord.parseWorldCoord(p.getLocation());
+
+		// Get the town the player is standing in
+		Town townPlayerIsStandingIn = townyAPI.getTownOrNull(townyAPI.getTownBlock(playerWorldCoord));
+		if (townPlayerIsStandingIn == null) {
+			// Player is standing outside of a town. There is no port here, return false.
+			return false;
+		}
+
+		// Get the port of the town the player is standing in
+		Port townPort = PortDAO.getPort(townPlayerIsStandingIn);
+		if (townPort == null) {
+			// The town the player is standing in has no port. Return false.
+			return false;
+		}
+
+		// Get the worldcoord of the town's port
+		WorldCoord portWorldCoord = WorldCoord.parseWorldCoord(townPort.location());
+		if(playerWorldCoord.equals(portWorldCoord)){return true;}
+		else return false;
+	}
+
+
+
 
 }

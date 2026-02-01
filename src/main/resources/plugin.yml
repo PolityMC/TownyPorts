@@ -25,3 +25,6 @@ permissions:
   townyports.set.spawn:
     description: Allow setting a custom port spawn location (via /t set port spawn).
     default: false
+  townyports.reload:
+    description: Reload the config file.
+    default: false

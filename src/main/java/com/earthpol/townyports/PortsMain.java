@@ -1,29 +1,27 @@
 package com.earthpol.townyports;
 
+import com.earthpol.earthPolLib.config.ReloadableConfigHandler;
 import com.earthpol.earthPolLib.logging.EnhancedLogger;
 import com.earthpol.townyports.commands.*;
+import com.earthpol.townyports.config.Config;
 import com.palmergames.bukkit.towny.TownyCommandAddonAPI;
 import com.palmergames.bukkit.towny.object.AddonCommand;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
 import java.io.IOException;
 
 public final class PortsMain extends JavaPlugin {
 
     public static PortsMain instance;
-    private File customConfigFile;
-    private FileConfiguration customConfig;
 
     private static EnhancedLogger logger;
-    private static EnhancedLogger log() {return logger;}
-
-
+    public static EnhancedLogger log() {return logger;}
     public static String PREFIX;
+
+    //Config
+    public static ReloadableConfigHandler<Config> reloadableConfigHandler;
+    public static ReloadableConfigHandler<Config> getReloadableConfigHandler() {return reloadableConfigHandler;}
 
     @Override
     public void onEnable() {
@@ -34,8 +32,14 @@ public final class PortsMain extends JavaPlugin {
         logger = EnhancedLogger.create(this, PREFIX,true);
         log().getLogRetentionTask().startNow();
 
-        createCustomConfig();
-        loadConfig();
+        //Config
+        try {
+            reloadableConfigHandler = new ReloadableConfigHandler<>(this,"config.yml", Config.class);
+        } catch (IOException e) {
+            log().severe("Failed to load config file! Shutting down.",e);
+            this.setEnabled(false);
+        }
+
         asciiText();
 
         setupListeners();
@@ -92,27 +96,6 @@ public final class PortsMain extends JavaPlugin {
 	private void printClean(String line) {
 		Bukkit.getConsoleSender().sendMessage(line);
 	}
-
-    public void createCustomConfig() {
-        customConfigFile = new File(getDataFolder(), "settings.yml");
-        if (!customConfigFile.exists()) {
-            customConfigFile.getParentFile().mkdirs();
-            saveResource("settings.yml", false);
-        }
-
-        customConfig = new YamlConfiguration();
-        try {
-            customConfig.load(customConfigFile);
-        } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-    public static FileConfiguration getCustomConfig() {
-        return instance.customConfig;
-    }
 
     @Override
     public void onDisable() {
