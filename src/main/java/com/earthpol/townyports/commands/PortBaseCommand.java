@@ -10,14 +10,20 @@ import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.command.BaseCommand;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
+import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
+import com.palmergames.bukkit.towny.object.TownBlock;
+import com.palmergames.bukkit.towny.object.WorldCoord;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 
 import java.io.IOException;
 import java.util.*;
@@ -110,6 +116,25 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                 return true;
             }
 
+            case "info": {
+                if (!Msg.isPlayer(sender)) {
+                    Msg.error(sender, "This command can only be used in-game.");
+                    return true;
+                }
+                showMyTownPortInfo((Player) sender);
+                return true;
+            }
+
+            case "here": {
+                if (!Msg.isPlayer(sender)) {
+                    Msg.error(sender, "This command can only be used in-game.");
+                    return true;
+                }
+                showPortHere((Player) sender);
+                return true;
+            }
+
+
             default:
                 // Treat anything else as a destination-town name
                 return PortsMain.getPortCommand().onCommand(sender, command, label, args);
@@ -162,13 +187,129 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                 .append(Component.text(" to view other pages.", Msg.MUTED)));
     }
 
+    private void showMyTownPortInfo(Player p) {
+        TownyAPI api = TownyAPI.getInstance();
+
+        Resident res = api.getResident(p);
+        if (res == null) {
+            Msg.error(p, "Failed to load your Towny Resident record. Please relog.");
+            return;
+        }
+
+        Town town = res.getTownOrNull();
+        if (town == null) {
+            Msg.error(p, "You do not belong to a town.");
+            return;
+        }
+
+        Port port = PortDAO.getPort(town);
+        if (port == null) {
+            Msg.warn(p, "Your town does not have a port set.");
+            Msg.send(p, Msg.PREFIX.append(Component.text("Set one with ", Msg.MUTED))
+                    .append(Msg.cmd("/t set port spawn", "Set your town's port spawn to your current location."))
+            );
+            return;
+        }
+
+        String sign = Config.CURRENCY_SIGN.getString();
+        Location loc = port.location();
+
+        Msg.send(p, Msg.PREFIX.append(Component.text("Your town port", Msg.BRAND)));
+        Msg.send(p, Msg.PREFIX
+                .append(Component.text("• Town: ", Msg.MUTED))
+                .append(Component.text(town.getName(), Msg.ACCENT))
+        );
+
+        Msg.send(p, Msg.PREFIX
+                .append(Component.text("• Fee: ", Msg.MUTED))
+                .append(Component.text(port.portPrice() + " " + sign, Msg.GOOD))
+        );
+
+        // Coords line with click-to-copy (suggest into chat)
+        String coordText = loc.getWorld().getName() + " " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ();
+        Component coords = Component.text(coordText, NamedTextColor.WHITE)
+                .hoverEvent(HoverEvent.showText(Component.text("Click to copy (suggest) coords", NamedTextColor.WHITE)))
+                .clickEvent(ClickEvent.suggestCommand(coordText));
+
+        Msg.send(p, Msg.PREFIX
+                .append(Component.text("• Location: ", Msg.MUTED))
+                .append(coords)
+        );
+
+        // Quick travel button
+        Msg.send(p, Msg.PREFIX
+                .append(Component.text("• Travel: ", Msg.MUTED))
+                .append(Msg.runCmd("Click to run /t port " + town.getName(),
+                        "/t port " + town.getName(),
+                        "Run the travel command"))
+        );
+    }
+
+    private void showPortHere(Player p) {
+        TownyAPI api = TownyAPI.getInstance();
+
+        if (api.isWilderness(p.getLocation())) {
+            Msg.warn(p, "You are currently in the wilderness.");
+            return;
+        }
+
+        WorldCoord wc = WorldCoord.parseWorldCoord(p.getLocation());
+        TownBlock tb = api.getTownBlock(wc);
+        Town hereTown = api.getTownOrNull(tb);
+
+        if (hereTown == null) {
+            Msg.warn(p, "You are not standing in a town.");
+            return;
+        }
+
+        Port port = PortDAO.getPort(hereTown);
+        if (port == null) {
+            Msg.warn(p, "This town (" + hereTown.getName() + ") does not have a port set.");
+            return;
+        }
+
+        WorldCoord portWc = WorldCoord.parseWorldCoord(port.location());
+        boolean isPortChunk = wc.equals(portWc);
+
+        Msg.send(p, Msg.PREFIX.append(Component.text("Port chunk check", Msg.BRAND)));
+        Msg.send(p, Msg.PREFIX
+                .append(Component.text("• Town: ", Msg.MUTED))
+                .append(Component.text(hereTown.getName(), Msg.ACCENT))
+        );
+
+        if (isPortChunk) {
+            Msg.success(p, "You are standing in this town's port chunk.");
+            Msg.send(p, Msg.PREFIX
+                    .append(Component.text("• Travel: ", Msg.MUTED))
+                    .append(Msg.runCmd("Click to run /t port " + hereTown.getName(),
+                            "/t port " + hereTown.getName(),
+                            "Run the travel command"))
+            );
+        } else {
+            Msg.warn(p, "You are NOT standing in this town's port chunk.");
+            // Show where the port chunk is, with click-to-copy coords
+            Location loc = port.location();
+            String coordText = loc.getWorld().getName() + " " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ();
+
+            Component coords = Component.text(coordText, NamedTextColor.WHITE)
+                    .hoverEvent(HoverEvent.showText(Component.text("Click to copy (suggest) coords", NamedTextColor.WHITE)))
+                    .clickEvent(ClickEvent.suggestCommand(coordText));
+
+            Msg.send(p, Msg.PREFIX
+                    .append(Component.text("• Port spawn: ", Msg.MUTED))
+                    .append(coords)
+            );
+        }
+    }
+
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             String token = args[0].toLowerCase(Locale.ROOT);
 
             // 1) Subcommands first (in this exact order)
-            List<String> subs = Arrays.asList("help", "list", "price");
+            List<String> subs = Arrays.asList("help", "list", "price", "info", "here");
 
             List<String> out = new ArrayList<>();
             for (String s : subs) {
