@@ -295,9 +295,9 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
             Msg.success(p, "You are standing in this town's port chunk.");
             Msg.send(p, Msg.PREFIX
                     .append(Component.text("• Travel: ", Msg.MUTED))
-                    .append(Msg.runCmd("Click to run /t port " + hereTown.getName(),
-                            "/t port " + hereTown.getName(),
-                            "Run the travel command"))
+                    .append(Msg.runCmd("Click to run /t port list",
+                            "/t port list",
+                            "Run the port list command"))
             );
         } else {
             Msg.warn(p, "You are NOT standing in this town's port chunk.");

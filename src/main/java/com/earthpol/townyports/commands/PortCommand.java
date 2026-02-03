@@ -20,6 +20,8 @@ import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.WorldCoord;
 import com.palmergames.util.MathUtil;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -71,41 +73,10 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			String msg = e.getMessage();
 			Msg.error(p, msg != null ? msg : "You cannot travel right now.");
 
-			// If this is the "must be standing in port chunk" error, add guidance + copyable coords.
+			// For the "must be standing in the same chunk as a port spawn" error,
+			// show ONE compact follow-up line with coords + /t port here shortcut.
 			if (msg != null && msg.startsWith("You must be standing in the same chunk as a port spawn")) {
-
-				// 1) quick helper command
-				Msg.send(p, Component.text()
-						.append(Msg.PREFIX)
-						.append(Component.text("Tip: ", Msg.MUTED))
-						.append(Msg.runCmd("Click to run /t port here", "/t port here",
-								"Check whether your current chunk is a port chunk"))
-						.build()
-				);
-
-				// 2) If their town has a port, show it as click-to-copy coords
-				Resident res = TownyAPI.getInstance().getResident(p);
-				Town town = (res != null) ? res.getTownOrNull() : null;
-
-				if (town != null) {
-					Port originPort = PortDAO.getPort(town);
-					if (originPort != null) {
-						var l = originPort.location();
-						String coordText = l.getWorld().getName() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ();
-
-						Component coords = Component.text(coordText, NamedTextColor.WHITE)
-								.hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
-										Component.text("Click to copy (suggest) coords", NamedTextColor.WHITE)))
-								.clickEvent(net.kyori.adventure.text.event.ClickEvent.suggestCommand(coordText));
-
-						Msg.send(p, Component.text()
-								.append(Msg.PREFIX)
-								.append(Component.text("Your town port spawn: ", Msg.MUTED))
-								.append(coords)
-								.build()
-						);
-					}
-				}
+				sendOriginPortHintIfPossible(p);
 			}
 
 			return true;
@@ -178,6 +149,47 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	}
 
 	/**
+	 * One compact follow-up message (no world name, styled X/Y/Z) with click-to-copy coords + quick /t port here.
+	 */
+	private static void sendOriginPortHintIfPossible(Player p) {
+		Resident res = TownyAPI.getInstance().getResident(p);
+		Town town = (res != null) ? res.getTownOrNull() : null;
+		if (town == null) return;
+
+		Port originPort = PortDAO.getPort(town);
+		if (originPort == null) return;
+
+		var l = originPort.location();
+		int x = l.getBlockX();
+		int y = l.getBlockY();
+		int z = l.getBlockZ();
+
+		// This is what we "copy" into chat: "x y z"
+		String raw = x + " " + y + " " + z;
+
+		Component coords = Component.text()
+				.append(Component.text("X ", Msg.MUTED))
+				.append(Component.text(x, Msg.ACCENT))
+				.append(Component.text("  Y ", Msg.MUTED))
+				.append(Component.text(y, Msg.ACCENT))
+				.append(Component.text("  Z ", Msg.MUTED))
+				.append(Component.text(z, Msg.ACCENT))
+				.hoverEvent(HoverEvent.showText(Component.text("Click to copy coords", NamedTextColor.WHITE)))
+				.clickEvent(ClickEvent.suggestCommand(raw))
+				.build();
+
+		Msg.send(p, Component.text()
+				.append(Msg.PREFIX)
+				.append(Component.text("Port spawn: ", Msg.MUTED))
+				.append(coords)
+				.append(Component.text("  •  ", Msg.MUTED))
+				.append(Msg.runCmd("Check with /t port here", "/t port here",
+						"Check whether your current chunk is a port chunk"))
+				.build()
+		);
+	}
+
+	/**
 	 * Checks all prerequisite conditions required before a player may port-travel.
 	 * Throws TownyException with a player-facing message if any condition is not met.
 	 */
@@ -230,18 +242,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		// Must start in a port chunk
 		if (!isPlayerStandingInPortChunk(player)) {
-
-			// Try to provide a helpful pointer: their own town's port spawn (if it exists).
-			Port originPort = PortDAO.getPort(playerTown);
-			if (originPort != null) {
-				var l = originPort.location();
-				String coords = l.getWorld().getName() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ();
-				throw new TownyException("You must be standing in the same chunk as a port spawn to travel. " +
-						"Your town's port spawn is at: " + coords);
-			}
-
-			throw new TownyException("You must be standing in the same chunk as a port spawn to travel. " +
-					"Your town does not have a port set.");
+			throw new TownyException("You must be standing in the same chunk as a port spawn to travel.");
 		}
 	}
 

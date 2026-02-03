@@ -83,6 +83,22 @@ public final class Msg {
         return base;
     }
 
+    public static Component styledCoords(int x, int y, int z) {
+        String raw = x + " " + y + " " + z;
+
+        return Component.text()
+                .append(Component.text("X ", MUTED))
+                .append(Component.text(x, ACCENT))
+                .append(Component.text("  Y ", MUTED))
+                .append(Component.text(y, ACCENT))
+                .append(Component.text("  Z ", MUTED))
+                .append(Component.text(z, ACCENT))
+                .hoverEvent(HoverEvent.showText(
+                        Component.text("Click to copy coords", NamedTextColor.WHITE)))
+                .clickEvent(ClickEvent.suggestCommand(raw))
+                .build();
+    }
+
     public static boolean isPlayer(CommandSender sender) {
         return sender instanceof Player;
     }

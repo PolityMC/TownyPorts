@@ -25,7 +25,7 @@ public final class HelpMenu {
         lines.add(line("/t port <town>", "Teleport to a town's port (requires being in a port chunk unless bypassed)."));
         lines.add(line("/t port price <town>", "View a town's port fee."));
         lines.add(line("/t port list [page]", "List all towns with active ports."));
-        lines.add(line("/t port info", "Show your town's port details (fee + coords)."));
+        lines.add(line("/t port info <town>", "Show your town's port details, or another town's."));
         lines.add(line("/t port here", "Show whether your current chunk is a port chunk (and whose)."));
         lines.add(line("/t set port spawn", "Set your town's port spawn to your current location."));
         lines.add(line("/t set port price <amount>", "Set your town's port fee."));
