@@ -165,13 +165,26 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> base = Arrays.asList("help", "list", "price", "reload");
             String token = args[0].toLowerCase(Locale.ROOT);
 
-            // include town names too for /t port <town>
-            List<String> towns = filterTownNames(token);
+            // 1) Subcommands first (in this exact order)
+            List<String> subs = Arrays.asList("help", "list", "price");
 
-            return concatFiltered(base, towns, token);
+            List<String> out = new ArrayList<>();
+            for (String s : subs) {
+                if (s.startsWith(token)) out.add(s);
+            }
+
+            // 2) Then towns
+            out.addAll(
+                    TownyAPI.getInstance().getTowns().stream()
+                            .map(Town::getName)
+                            .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(token))
+                            .sorted(String.CASE_INSENSITIVE_ORDER)
+                            .toList()
+            );
+
+            return out;
         }
 
         if (args.length == 2) {
@@ -191,12 +204,5 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                 .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(token))
                 .sorted(String.CASE_INSENSITIVE_ORDER)
                 .collect(Collectors.toList());
-    }
-
-    private static List<String> concatFiltered(List<String> a, List<String> b, String token) {
-        List<String> out = new ArrayList<>();
-        for (String s : a) if (s.toLowerCase(Locale.ROOT).startsWith(token)) out.add(s);
-        out.addAll(b);
-        return out;
     }
 }

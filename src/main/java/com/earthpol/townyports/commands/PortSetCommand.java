@@ -176,7 +176,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
             return null;
         }
 
-        // FIXED: permission check is now correct
+
         boolean hasPermission = p.hasPermission("townyports.set.price") || p.isOp();
         if (!hasPermission) {
             Msg.error(p, "You do not have permission to set the town port price.");
@@ -188,9 +188,11 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
             return null;
         }
 
+        int min = Config.MINIMUM_PORT_FEE.getInt();
         int max = Config.MAXIMUM_PORT_FEE.getInt();
-        if (price < 0 || price > max) {
-            Msg.error(p, "Fee must be between 0 and " + max + ".");
+
+        if (price < min || price > max) {
+            Msg.error(p, "Fee must be between " + min + " and " + max + ".");
             return null;
         }
 
@@ -208,7 +210,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("price")) {
-            return Arrays.asList("0", "5", "10", "25", "50");
+            return Arrays.asList("1", "5", "10", "25", "50", "100");
         }
 
         return Collections.emptyList();

@@ -28,7 +28,6 @@ public final class HelpMenu {
         lines.add(line("/t set port spawn", "Set your town's port spawn to your current location."));
         lines.add(line("/t set port price <amount>", "Set your town's port fee."));
         lines.add(line("/t set port remove", "Remove your town's port spawn + fee."));
-        lines.add(line("/t port reload", "Reload TownyPorts config."));
 
         lines.add(Component.text(" ", NamedTextColor.WHITE));
         lines.add(Msg.PREFIX.append(Component.text("Tip: ", Msg.MUTED))
