@@ -121,9 +121,23 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
                     Msg.error(sender, "This command can only be used in-game.");
                     return true;
                 }
-                showMyTownPortInfo((Player) sender);
+
+                Player p = (Player) sender;
+
+                if (args.length == 1) {
+                    showMyTownPortInfo(p);
+                    return true;
+                }
+
+                if (args.length == 2) {
+                    showTownPortInfo(p, args[1]);
+                    return true;
+                }
+
+                Msg.usage(p, Msg.plain("/t port info [town]").color(Msg.ACCENT));
                 return true;
             }
+
 
             case "here": {
                 if (!Msg.isPlayer(sender)) {
@@ -302,6 +316,55 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
         }
     }
 
+    private void showTownPortInfo(Player viewer, String townName) {
+        try {
+            Town town = getTownOrThrow(townName);
+            Port port = PortDAO.getPort(town);
+
+            if (port == null) {
+                Msg.warn(viewer, town.getName() + " does not have a port set.");
+                return;
+            }
+
+            String sign = Config.CURRENCY_SIGN.getString();
+            var loc = port.location();
+
+            Msg.send(viewer, Msg.PREFIX.append(net.kyori.adventure.text.Component.text("Port info", Msg.BRAND)));
+            Msg.send(viewer, Msg.PREFIX
+                    .append(net.kyori.adventure.text.Component.text("• Town: ", Msg.MUTED))
+                    .append(net.kyori.adventure.text.Component.text(town.getName(), Msg.ACCENT))
+            );
+            Msg.send(viewer, Msg.PREFIX
+                    .append(net.kyori.adventure.text.Component.text("• Fee: ", Msg.MUTED))
+                    .append(net.kyori.adventure.text.Component.text(port.portPrice() + " " + sign, Msg.GOOD))
+            );
+
+            String coordText = loc.getWorld().getName() + " " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ();
+
+            var coords = net.kyori.adventure.text.Component.text(coordText, net.kyori.adventure.text.format.NamedTextColor.WHITE)
+                    .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                            net.kyori.adventure.text.Component.text("Click to copy (suggest) coords", net.kyori.adventure.text.format.NamedTextColor.WHITE)
+                    ))
+                    .clickEvent(net.kyori.adventure.text.event.ClickEvent.suggestCommand(coordText));
+
+            Msg.send(viewer, Msg.PREFIX
+                    .append(net.kyori.adventure.text.Component.text("• Location: ", Msg.MUTED))
+                    .append(coords)
+            );
+
+            Msg.send(viewer, Msg.PREFIX
+                    .append(net.kyori.adventure.text.Component.text("• Travel: ", Msg.MUTED))
+                    .append(Msg.runCmd("Click to run /t port " + town.getName(),
+                            "/t port " + town.getName(),
+                            "Run the travel command"))
+            );
+
+        } catch (TownyException e) {
+            Msg.error(viewer, e.getMessage());
+        }
+    }
+
+
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
@@ -332,7 +395,7 @@ public class PortBaseCommand extends BaseCommand implements CommandExecutor, Tab
             String sub = args[0].toLowerCase(Locale.ROOT);
             String token = args[1].toLowerCase(Locale.ROOT);
 
-            if (sub.equals("price")) return filterTownNames(token);
+            if (sub.equals("price") || sub.equals("info")) return filterTownNames(token);
             if (sub.equals("list")) return Arrays.asList("1", "2", "3", "4", "5");
         }
 

@@ -67,7 +67,47 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		try {
 			checkTeleportEligibility(p, destinationTown, destinationPort);
 		} catch (TownyException e) {
-			Msg.error(p, e.getMessage());
+
+			String msg = e.getMessage();
+			Msg.error(p, msg != null ? msg : "You cannot travel right now.");
+
+			// If this is the "must be standing in port chunk" error, add guidance + copyable coords.
+			if (msg != null && msg.startsWith("You must be standing in the same chunk as a port spawn")) {
+
+				// 1) quick helper command
+				Msg.send(p, Component.text()
+						.append(Msg.PREFIX)
+						.append(Component.text("Tip: ", Msg.MUTED))
+						.append(Msg.runCmd("Click to run /t port here", "/t port here",
+								"Check whether your current chunk is a port chunk"))
+						.build()
+				);
+
+				// 2) If their town has a port, show it as click-to-copy coords
+				Resident res = TownyAPI.getInstance().getResident(p);
+				Town town = (res != null) ? res.getTownOrNull() : null;
+
+				if (town != null) {
+					Port originPort = PortDAO.getPort(town);
+					if (originPort != null) {
+						var l = originPort.location();
+						String coordText = l.getWorld().getName() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ();
+
+						Component coords = Component.text(coordText, NamedTextColor.WHITE)
+								.hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+										Component.text("Click to copy (suggest) coords", NamedTextColor.WHITE)))
+								.clickEvent(net.kyori.adventure.text.event.ClickEvent.suggestCommand(coordText));
+
+						Msg.send(p, Component.text()
+								.append(Msg.PREFIX)
+								.append(Component.text("Your town port spawn: ", Msg.MUTED))
+								.append(coords)
+								.build()
+						);
+					}
+				}
+			}
+
 			return true;
 		}
 
@@ -190,7 +230,18 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		// Must start in a port chunk
 		if (!isPlayerStandingInPortChunk(player)) {
-			throw new TownyException("You must be standing in the same chunk as a port spawn to travel.");
+
+			// Try to provide a helpful pointer: their own town's port spawn (if it exists).
+			Port originPort = PortDAO.getPort(playerTown);
+			if (originPort != null) {
+				var l = originPort.location();
+				String coords = l.getWorld().getName() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ();
+				throw new TownyException("You must be standing in the same chunk as a port spawn to travel. " +
+						"Your town's port spawn is at: " + coords);
+			}
+
+			throw new TownyException("You must be standing in the same chunk as a port spawn to travel. " +
+					"Your town does not have a port set.");
 		}
 	}
 
