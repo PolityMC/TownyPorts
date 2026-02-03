@@ -132,7 +132,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor {
     private static boolean canSetPortPrice(Player p, double price){
 
         // Permission check
-        boolean hasPermission = p.hasPermission("townyports.set.spawn") || p.isOp();
+        boolean hasPermission = p.hasPermission("townyports.set.price") || p.isOp();
         if(hasPermission) {
             p.sendMessage("You do not have permission to set the town port price.");
             return false;
