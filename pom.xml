@@ -6,7 +6,7 @@
 
     <groupId>com.earthpol</groupId>
     <artifactId>TownyPorts</artifactId>
-    <version>4.1.0</version>
+    <version>4.1.1</version>
     <packaging>jar</packaging>
 
     <name>TownyPorts</name>
@@ -67,6 +67,10 @@
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+        <repository>
+            <id>bitworks-nexus</id>
+            <url>https://nexus.bitworksmc.com/repository/maven-releases/</url>
         </repository>
     </repositories>
 

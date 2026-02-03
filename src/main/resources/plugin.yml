@@ -12,9 +12,6 @@ commands:
     port:
       aliases: []
       description: TownyPorts command for teleporting to ports
-    townuuid:
-      aliases: []
-      description: Get a town's UUID
 permissions:
   townyports.bypass.wilderness:
     description: Bypass the wilderness restriction when teleporting to a port.

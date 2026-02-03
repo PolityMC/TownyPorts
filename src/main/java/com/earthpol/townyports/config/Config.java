@@ -14,7 +14,7 @@ public enum Config implements ReloadableConfiguration {
     ),
 
     MINIMUM_PORT_FEE(
-            ReloadableConfigNode.of("minimum-port-fee", int.class, 10)
+            ReloadableConfigNode.of("minimum-port-fee", int.class, 1)
     ),
 
     MAXIMUM_PORT_FEE(
@@ -22,7 +22,7 @@ public enum Config implements ReloadableConfiguration {
     ),
 
     DEFAULT_PORT_FEE(
-            ReloadableConfigNode.of("default-port-fee", int.class, 50)
+            ReloadableConfigNode.of("default-port-fee", int.class, 10)
     ),
 
     MAXIMUM_PORT_DISTANCE_IN_CHUNKS(
