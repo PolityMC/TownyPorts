@@ -68,6 +68,10 @@
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
+        <repository>
+            <id>bitworks-nexus</id>
+            <url>https://nexus.bitworksmc.com/repository/maven-releases/</url>
+        </repository>
     </repositories>
 
     <dependencies>
