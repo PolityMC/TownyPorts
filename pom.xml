@@ -6,7 +6,7 @@
 
     <groupId>com.earthpol</groupId>
     <artifactId>TownyPorts</artifactId>
-    <version>4.1.1</version>
+    <version>4.1.2</version>
     <packaging>jar</packaging>
 
     <name>TownyPorts</name>
@@ -96,7 +96,7 @@
         <dependency>
             <groupId>com.github.earthpol</groupId>
             <artifactId>earthpollib</artifactId>
-            <version>1.10.3</version>
+            <version>1.11.1</version>
         </dependency>
     </dependencies>
 </project>
