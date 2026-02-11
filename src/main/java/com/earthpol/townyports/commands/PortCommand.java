@@ -23,7 +23,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -101,6 +103,12 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		long warmupTicks = Config.PORT_TRAVEL_WARMUP_IN_TICKS.getLong();
 		long warmupSeconds = warmupTicks / 20;
 		String sign = Config.CURRENCY_SIGN.getString();
+		double travelCost = destinationPort.portPrice();
+
+		if (!hasSufficientBalance(p, travelCost)) {
+			Msg.error(p, "You cannot afford to travel to this port.");
+			return true;
+		}
 
 		Teleporter portsTeleporter = Teleporter.builder(PortsMain.instance)
 				.setVehicleTeleporter(portsVehicleTeleporter)
@@ -109,7 +117,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 						Component.text()
 								.append(Msg.PREFIX)
 								.append(Component.text("You will pay ", NamedTextColor.WHITE))
-								.append(Component.text(destinationPort.portPrice() + " " + sign, Msg.GOOD))
+								.append(Component.text(travelCost + " " + sign, Msg.GOOD))
 								.append(Component.text(" to travel to ", NamedTextColor.WHITE))
 								.append(Component.text(destinationPort.getName(), Msg.ACCENT))
 								.append(Component.text(" in " + warmupSeconds + "s. ", NamedTextColor.WHITE))
@@ -139,13 +147,49 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		portsTeleporter.teleport(
 				p,
 				destinationPort.location(),
-				destinationPort.portPrice(),
+				travelCost,
 				destinationTown.getAccount(),
 				"TownyPorts teleport"
 		);
 
-		portsCooldownManager.setCooldown(p, Config.PORT_TRAVEL_COOLDOWN_IN_SECONDS.getLong());
+		startTeleportCountdown(p, warmupTicks);
+		scheduleCooldownOnSuccessfulTeleport(p, destinationPort.location(), warmupTicks);
 		return true;
+	}
+
+	private static void startTeleportCountdown(@NotNull Player player, long warmupTicks) {
+		for (int second = 3; second >= 1; second--) {
+			int countdownSecond = second;
+			long delay = warmupTicks - (second * 20L);
+			if (delay < 0) continue;
+
+			Bukkit.getScheduler().runTaskLater(PortsMain.instance, () -> {
+				if (!player.isOnline()) return;
+				player.sendActionBar(Component.text("Teleporting in " + countdownSecond + "...", Msg.ACCENT));
+			}, delay);
+		}
+	}
+
+	private static void scheduleCooldownOnSuccessfulTeleport(@NotNull Player player, @NotNull Location destination, long warmupTicks) {
+		Bukkit.getScheduler().runTaskLater(PortsMain.instance, () -> {
+			if (!player.isOnline()) return;
+
+			Location current = player.getLocation();
+			if (!current.getWorld().equals(destination.getWorld())) return;
+
+			if (current.distanceSquared(destination) <= 4.0) {
+				portsCooldownManager.setCooldown(player, Config.PORT_TRAVEL_COOLDOWN_IN_SECONDS.getLong());
+			}
+		}, warmupTicks + 5L);
+	}
+
+	private static boolean hasSufficientBalance(@NotNull Player player, double amount) {
+		var registration = Bukkit.getServicesManager().getRegistration(Economy.class);
+		if (registration == null || registration.getProvider() == null) {
+			return true;
+		}
+
+		return registration.getProvider().has(player, amount);
 	}
 
 	/**
