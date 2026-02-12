@@ -16,9 +16,6 @@ permissions:
   townyports.bypass.wilderness:
     description: Bypass the wilderness restriction when teleporting to a port.
     default: false
-  townyports.bypass.distance:
-    description: Bypass the maximum-distance restriction when teleporting to a port.
-    default: false
   townyports.set.spawn:
     description: Allow setting a custom port spawn location (via /t set port spawn).
     default: false
