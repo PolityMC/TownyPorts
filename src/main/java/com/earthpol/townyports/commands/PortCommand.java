@@ -33,6 +33,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Vehicle;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Method;
+import java.util.*;
+
 public class PortCommand extends BaseCommand implements CommandExecutor {
 
 	private static final PlayerCooldownManager portsCooldownManager = new PlayerCooldownManager();
@@ -69,7 +72,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		try {
-			checkTeleportEligibility(p, destinationTown, destinationPort);
+			checkTeleportEligibility(p, destinationTown);
 		} catch (TownyException e) {
 
 			String msg = e.getMessage();
@@ -103,7 +106,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		long warmupTicks = Config.PORT_TRAVEL_WARMUP_IN_TICKS.getLong();
 		long warmupSeconds = warmupTicks / 20;
 		String sign = Config.CURRENCY_SIGN.getString();
-		double travelCost = destinationPort.portPrice();
+
+		RoutePlan routePlan = buildRoutePlan(p, destinationPort);
+		if (routePlan == null) {
+			Msg.error(p, "That port is too far away to travel to.");
+			return true;
+		}
+
+		double travelCost = routePlan.totalCost();
 
 		if (!hasSufficientBalance(p, travelCost)) {
 			Msg.error(p, "You cannot afford to travel to this port.");
@@ -120,6 +130,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 								.append(Component.text(travelCost + " " + sign, Msg.GOOD))
 								.append(Component.text(" to travel to ", NamedTextColor.WHITE))
 								.append(Component.text(destinationPort.getName(), Msg.ACCENT))
+								.append(Component.text(" through " + routePlan.legCount() + " port(s)", NamedTextColor.WHITE))
 								.append(Component.text(" in " + warmupSeconds + "s. ", NamedTextColor.WHITE))
 								.append(Component.text("Don't move.", Msg.MUTED))
 								.build()
@@ -152,8 +163,9 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				"TownyPorts teleport"
 		);
 
+		sendRouteSummary(p, routePlan, sign);
 		startTeleportCountdown(p, warmupTicks);
-		scheduleCooldownOnSuccessfulTeleport(p, destinationPort.location(), warmupTicks);
+		scheduleCooldownOnSuccessfulTeleport(p, destinationPort.location(), warmupTicks, destinationTown, routePlan);
 		return true;
 	}
 
@@ -170,7 +182,9 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 	}
 
-	private static void scheduleCooldownOnSuccessfulTeleport(@NotNull Player player, @NotNull Location destination, long warmupTicks) {
+	private static void scheduleCooldownOnSuccessfulTeleport(@NotNull Player player, @NotNull Location destination, long warmupTicks,
+														 @NotNull Town destinationTown,
+														 @NotNull RoutePlan routePlan) {
 		Bukkit.getScheduler().runTaskLater(PortsMain.instance, () -> {
 			if (!player.isOnline()) return;
 
@@ -178,9 +192,38 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			if (!current.getWorld().equals(destination.getWorld())) return;
 
 			if (current.distanceSquared(destination) <= 4.0) {
+				distributePortTrafficPayouts(destinationTown, routePlan);
 				portsCooldownManager.setCooldown(player, Config.PORT_TRAVEL_COOLDOWN_IN_SECONDS.getLong());
 			}
 		}, warmupTicks + 5L);
+	}
+
+	private static void distributePortTrafficPayouts(@NotNull Town destinationTown, @NotNull RoutePlan routePlan) {
+		if (routePlan.stops().size() <= 1) return;
+
+		Object destinationAccount = destinationTown.getAccount();
+		for (RouteStop stop : routePlan.stops()) {
+			if (stop.town().equals(destinationTown)) continue;
+			try {
+				Object stopAccount = stop.town().getAccount();
+				payBetweenAccounts(destinationAccount, stopAccount, stop.cost(), "TownyPorts routed traffic payout");
+			} catch (Exception ignored) {
+				// Keep travel successful even if account redistribution fails for a specific stop.
+			}
+		}
+	}
+
+	private static void payBetweenAccounts(Object fromAccount, Object toAccount, double amount, String reason) throws Exception {
+		for (Method method : fromAccount.getClass().getMethods()) {
+			if (!method.getName().equals("payTo")) continue;
+			Class<?>[] params = method.getParameterTypes();
+			if (params.length != 3) continue;
+			if (params[0] != double.class) continue;
+			if (!params[1].isAssignableFrom(toAccount.getClass())) continue;
+			if (params[2] != String.class) continue;
+			method.invoke(fromAccount, amount, toAccount, reason);
+			return;
+		}
 	}
 
 	private static boolean hasSufficientBalance(@NotNull Player player, double amount) {
@@ -237,7 +280,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	 * Checks all prerequisite conditions required before a player may port-travel.
 	 * Throws TownyException with a player-facing message if any condition is not met.
 	 */
-	private static void checkTeleportEligibility(Player player, @NotNull Town destinationTown, @NotNull Port destinationPort) throws TownyException {
+	private static void checkTeleportEligibility(Player player, @NotNull Town destinationTown) throws TownyException {
 
 		TownyAPI townyAPI = TownyAPI.getInstance();
 
@@ -271,22 +314,141 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			throw new TownyException("You cannot port-travel to an enemy nation's ports.");
 		}
 
-		// Distance restriction
-		int portMaxDistance = Config.MAXIMUM_PORT_DISTANCE_IN_CHUNKS.getInt();
-		WorldCoord destWc = townyAPI.getTownBlock(destinationPort.location()).getWorldCoord();
-
-		Location loc = player.getLocation();
-		int originChunkX = loc.getBlockX() >> 4;
-		int originChunkZ = loc.getBlockZ() >> 4;
-		WorldCoord originWc = new WorldCoord(loc.getWorld().getName(), originChunkX, originChunkZ);
-
-		if (MathUtil.distance(originWc, destWc) > portMaxDistance && !player.hasPermission("townyports.bypass.distance")) {
-			throw new TownyException("That port is too far away to travel to.");
-		}
-
 		// Must start in a port chunk
 		if (!isPlayerStandingInPortChunk(player)) {
 			throw new TownyException("You must be standing in the same chunk as a port spawn to travel.");
+		}
+	}
+
+	private static RoutePlan buildRoutePlan(@NotNull Player player, @NotNull Port destinationPort) {
+		if (player.hasPermission("townyports.bypass.distance")) {
+			Town destinationTown = destinationPort.town();
+			return new RoutePlan(List.of(new RouteStop(destinationTown, destinationPort.portPrice())), destinationPort.portPrice());
+		}
+
+		TownyAPI townyAPI = TownyAPI.getInstance();
+		Town originTown = townyAPI.getTownOrNull(townyAPI.getTownBlock(WorldCoord.parseWorldCoord(player.getLocation())));
+		if (originTown == null) return null;
+
+		Port originPort = PortDAO.getPort(originTown);
+		if (originPort == null) return null;
+
+		if (originTown.equals(destinationPort.town())) {
+			return new RoutePlan(List.of(new RouteStop(destinationPort.town(), destinationPort.portPrice())), destinationPort.portPrice());
+		}
+
+		List<Port> allPorts = PortDAO.getAllPorts();
+		Map<Town, Port> byTown = new HashMap<>();
+		for (Port port : allPorts) {
+			byTown.put(port.town(), port);
+		}
+
+		Port dest = byTown.get(destinationPort.town());
+		Port start = byTown.get(originTown);
+		if (start == null || dest == null) return null;
+
+		int maxDistance = Config.MAXIMUM_PORT_DISTANCE_IN_CHUNKS.getInt();
+		Nation playerNation = getPlayerNation(player);
+		Map<Town, Double> bestCost = new HashMap<>();
+		Map<Town, Town> previousTown = new HashMap<>();
+		PriorityQueue<RouteNode> queue = new PriorityQueue<>(Comparator.comparingDouble(RouteNode::cost));
+
+		bestCost.put(originTown, 0.0);
+		queue.add(new RouteNode(start, 0.0));
+
+		while (!queue.isEmpty()) {
+			RouteNode current = queue.poll();
+			if (current.port().town().equals(destinationPort.town())) break;
+
+			double knownBest = bestCost.getOrDefault(current.port().town(), Double.MAX_VALUE);
+			if (current.cost() > knownBest) continue;
+
+			for (Port next : allPorts) {
+				if (next.town().equals(current.port().town())) continue;
+				if (!canUsePort(playerNation, next.town())) continue;
+
+				if (MathUtil.distance(WorldCoord.parseWorldCoord(current.port().location()), WorldCoord.parseWorldCoord(next.location())) > maxDistance) {
+					continue;
+				}
+
+				double nextCost = current.cost() + next.portPrice();
+				double existing = bestCost.getOrDefault(next.town(), Double.MAX_VALUE);
+				if (nextCost < existing) {
+					bestCost.put(next.town(), nextCost);
+					previousTown.put(next.town(), current.port().town());
+					queue.add(new RouteNode(next, nextCost));
+				}
+			}
+		}
+
+		if (!bestCost.containsKey(destinationPort.town())) {
+			return null;
+		}
+
+		List<RouteStop> reversedStops = new ArrayList<>();
+		Town stepTown = destinationPort.town();
+		while (!stepTown.equals(originTown)) {
+			Port stepPort = byTown.get(stepTown);
+			if (stepPort == null) return null;
+			reversedStops.add(new RouteStop(stepTown, stepPort.portPrice()));
+			stepTown = previousTown.get(stepTown);
+			if (stepTown == null) return null;
+		}
+
+		Collections.reverse(reversedStops);
+		return new RoutePlan(reversedStops, bestCost.get(destinationPort.town()));
+	}
+
+	private static void sendRouteSummary(@NotNull Player player, @NotNull RoutePlan routePlan, @NotNull String sign) {
+		if (routePlan.stops().isEmpty()) return;
+
+		StringBuilder stopList = new StringBuilder();
+		for (int i = 0; i < routePlan.stops().size() - 1; i++) {
+			if (i > 0) stopList.append(", ");
+			stopList.append(routePlan.stops().get(i).town().getName());
+		}
+
+		RouteStop finalStop = routePlan.stops().get(routePlan.stops().size() - 1);
+		Component message = Component.text()
+				.append(Msg.PREFIX)
+				.append(Component.text("Route: ", Msg.MUTED))
+				.append(Component.text(finalStop.town().getName(), Msg.ACCENT))
+				.append(Component.text(" | cost " + routePlan.totalCost() + " " + sign, Msg.GOOD))
+				.append(Component.text(" | through " + routePlan.legCount() + " port(s)", NamedTextColor.WHITE))
+				.build();
+		Msg.send(player, message);
+
+		if (stopList.length() > 0) {
+			Msg.send(player, Component.text()
+					.append(Msg.PREFIX)
+					.append(Component.text("Stops: ", Msg.MUTED))
+					.append(Component.text(stopList.toString(), Msg.ACCENT))
+					.build());
+		}
+	}
+
+	private static Nation getPlayerNation(@NotNull Player player) {
+		Resident resident = TownyAPI.getInstance().getResident(player);
+		if (resident == null) return null;
+		Town town = resident.getTownOrNull();
+		if (town == null) return null;
+		return town.getNationOrNull();
+	}
+
+	private static boolean canUsePort(Nation playerNation, @NotNull Town destinationTown) {
+		Nation destinationNation = destinationTown.getNationOrNull();
+		if (destinationNation == null || playerNation == null) return true;
+		if (!Config.PORT_TRAVEL_DENIES_FOR_ENEMIES.getBool()) return true;
+		return !destinationNation.hasEnemy(playerNation);
+	}
+
+	private record RouteNode(Port port, double cost) {}
+
+	private record RouteStop(Town town, double cost) {}
+
+	private record RoutePlan(List<RouteStop> stops, double totalCost) {
+		int legCount() {
+			return stops.size();
 		}
 	}
 
