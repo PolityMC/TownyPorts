@@ -320,11 +320,6 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	}
 
 	private static RoutePlan buildRoutePlan(@NotNull Player player, @NotNull Port destinationPort) {
-		if (player.hasPermission("townyports.bypass.distance")) {
-			Town destinationTown = destinationPort.town();
-			return new RoutePlan(List.of(new RouteStop(destinationTown, destinationPort.portPrice())), destinationPort.portPrice());
-		}
-
 		TownyAPI townyAPI = TownyAPI.getInstance();
 		Town originTown = townyAPI.getTownOrNull(townyAPI.getTownBlock(WorldCoord.parseWorldCoord(player.getLocation())));
 		if (originTown == null) return null;
