@@ -396,6 +396,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		Collections.reverse(reversedStops);
+
+		if (reversedStops.size() == 1) {
+			double directHopDistance = getChunkDistanceBetweenPorts(start, dest);
+			if (directHopDistance > maxDistance) {
+				return null;
+			}
+		}
+
 		return new RoutePlan(reversedStops, bestCost.get(destinationPort.town()));
 	}
 
@@ -451,8 +459,13 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			return Double.MAX_VALUE;
 		}
 
-		double deltaChunkX = aLocation.getChunk().getX() - bLocation.getChunk().getX();
-		double deltaChunkZ = aLocation.getChunk().getZ() - bLocation.getChunk().getZ();
+		int aChunkX = aLocation.getBlockX() >> 4;
+		int aChunkZ = aLocation.getBlockZ() >> 4;
+		int bChunkX = bLocation.getBlockX() >> 4;
+		int bChunkZ = bLocation.getBlockZ() >> 4;
+
+		double deltaChunkX = aChunkX - bChunkX;
+		double deltaChunkZ = aChunkZ - bChunkZ;
 		return Math.sqrt((deltaChunkX * deltaChunkX) + (deltaChunkZ * deltaChunkZ));
 	}
 
