@@ -412,7 +412,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		Component message = Component.text()
 				.append(Msg.PREFIX)
 				.append(Component.text("Route: ", Msg.MUTED))
-				.append(Component.text("destination " + finalStop.town().getName(), Msg.ACCENT))
+				.append(Component.text(finalStop.town().getName(), Msg.ACCENT))
 				.append(Component.text(" | cost " + routePlan.totalCost() + " " + sign, Msg.GOOD))
 				.append(Component.text(" | through " + routePlan.legCount() + " port(s)", NamedTextColor.WHITE))
 				.build();
