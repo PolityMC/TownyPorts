@@ -399,7 +399,13 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			}
 		}
 
-		return new RoutePlan(reversedStops, bestCost.get(destinationPort.town()));
+		int minimumIntermediateStops = getMinimumIntermediateStopsRequired(start, dest, maxDistance);
+		RoutePlan routePlan = new RoutePlan(reversedStops, bestCost.get(destinationPort.town()));
+		if (routePlan.intermediateStopCount() < minimumIntermediateStops) {
+			return null;
+		}
+
+		return routePlan;
 	}
 
 	private static void sendRouteSummary(@NotNull Player player, @NotNull RoutePlan routePlan, @NotNull String sign) {
@@ -440,6 +446,21 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				.append(Component.text("Fees: ", Msg.MUTED))
 				.append(Component.text(feeList.toString(), Msg.GOOD))
 				.build());
+	}
+
+
+	private static int getMinimumIntermediateStopsRequired(@NotNull Port start, @NotNull Port destination, int maxDistancePerHopInChunks) {
+		if (maxDistancePerHopInChunks <= 0) {
+			return Integer.MAX_VALUE;
+		}
+
+		double directDistance = getChunkDistanceBetweenPorts(start, destination);
+		if (directDistance == Double.MAX_VALUE) {
+			return Integer.MAX_VALUE;
+		}
+
+		int requiredHopCount = (int) Math.ceil(directDistance / maxDistancePerHopInChunks);
+		return Math.max(0, requiredHopCount - 1);
 	}
 
 	private static double getChunkDistanceBetweenPorts(@NotNull Port a, @NotNull Port b) {
