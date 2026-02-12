@@ -263,12 +263,115 @@ A port is a town travel point. If your server has TownyPorts, you can fast-trave
 3. Don’t move during warmup.
 4. You arrive at that town’s port.
 
-## Commands you will actually use
-- `/t port list` → shows towns with ports.
-- `/t port <town>` → travel there.
-- `/t port price <town>` → see travel fee.
-- `/t port info` → see your town port details.
-- `/t port here` → checks if you are standing in a valid port chunk.
+## Player command guide (each command)
+
+### `/t port <town>`
+Use this to travel to another town’s port.
+
+Example:
+```
+/t port Oakvale
+```
+
+What it does:
+- Checks if Oakvale has a port.
+- Checks if you are currently standing in a valid port chunk.
+- Shows route and total fee.
+- Starts a warmup, then teleports you if you do not move.
+
+### `/t port price <town>`
+Use this to check the fee before traveling.
+
+Example:
+```
+/t port price Oakvale
+```
+
+What it does:
+- Shows the configured price for that town’s port.
+- Helps you avoid failed teleports from not having enough money.
+
+### `/t port list [page]`
+Use this to browse all towns that currently have ports.
+
+Examples:
+```
+/t port list
+/t port list 2
+```
+
+What it does:
+- Lists active ports with fee and location info.
+- Lets you click town names in chat (on supported clients) to run travel commands quickly.
+
+### `/t port here`
+Use this when travel fails and you are not sure why.
+
+Example:
+```
+/t port here
+```
+
+What it does:
+- Tells you whether your current chunk is the town’s official port chunk.
+- If you are not in the right chunk, it shows where the port spawn is.
+
+### `/t set port spawn`
+Town staff command to set your town’s port location.
+
+Example:
+```
+/t set port spawn
+```
+
+What it does:
+- Saves your current location as your town port spawn.
+- Must be used inside your own town and at a safe location.
+
+### `/t set port price <amount>`
+Town staff command to set your town’s travel fee.
+
+Example:
+```
+/t set port price 25
+```
+
+What it does:
+- Sets how much players are charged to use your town’s port as part of a route.
+- Amount must be inside the server’s configured min/max range.
+
+### `/t set port remove`
+Town staff command to disable your town’s port.
+
+Example:
+```
+/t set port remove
+```
+
+What it does:
+- Removes both the stored spawn and fee for your town’s port.
+- Your town will no longer appear as an active destination until reconfigured.
+
+## How multi-stop routes work (1000 chunk example)
+
+Sometimes the destination is too far for one direct hop.
+
+If the server has `maximum-port-distance-in-chunks: 1000`, then each jump between ports must be **1000 chunks or less**.
+
+Example:
+- Your town A to destination D is 2400 chunks apart.
+- Direct A → D is blocked (too far for one hop).
+- If towns B and C have ports, a valid route might be:
+  - A → B (900 chunks)
+  - B → C (800 chunks)
+  - C → D (700 chunks)
+
+Because each hop is under 1000 chunks, the trip is allowed.
+
+### Cost in a multi-stop route
+- You pay the **total** route cost shown before teleport.
+- The total is built from the stop fees in that route.
+- This is why long-distance travel can cost more than a short direct trip.
 
 ## Why travel sometimes fails
 - You are not in a port chunk.
