@@ -18,7 +18,6 @@ import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.WorldCoord;
-import com.palmergames.util.MathUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -130,7 +129,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 								.append(Component.text(travelCost + " " + sign, Msg.GOOD))
 								.append(Component.text(" to travel to ", NamedTextColor.WHITE))
 								.append(Component.text(destinationPort.getName(), Msg.ACCENT))
-								.append(Component.text(" through " + routePlan.legCount() + " port(s)", NamedTextColor.WHITE))
+								.append(Component.text(" via " + routePlan.intermediateStopCount() + " stop(s)", NamedTextColor.WHITE))
 								.append(Component.text(" in " + warmupSeconds + "s. ", NamedTextColor.WHITE))
 								.append(Component.text("Don't move.", Msg.MUTED))
 								.build()
@@ -367,7 +366,8 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				if (next.town().equals(current.port().town())) continue;
 				if (!canUsePort(playerNation, next.town())) continue;
 
-				if (MathUtil.distance(WorldCoord.parseWorldCoord(current.port().location()), WorldCoord.parseWorldCoord(next.location())) > maxDistance) {
+				double hopDistanceInChunks = getChunkDistanceBetweenPorts(current.port(), next);
+				if (hopDistanceInChunks > maxDistance) {
 					continue;
 				}
 
@@ -414,7 +414,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				.append(Component.text("Route: ", Msg.MUTED))
 				.append(Component.text(finalStop.town().getName(), Msg.ACCENT))
 				.append(Component.text(" | cost " + routePlan.totalCost() + " " + sign, Msg.GOOD))
-				.append(Component.text(" | through " + routePlan.legCount() + " port(s)", NamedTextColor.WHITE))
+				.append(Component.text(" | via " + routePlan.intermediateStopCount() + " stop(s)", NamedTextColor.WHITE))
 				.build();
 		Msg.send(player, message);
 
@@ -425,6 +425,35 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 					.append(Component.text(stopList.toString(), Msg.ACCENT))
 					.build());
 		}
+
+		StringBuilder feeList = new StringBuilder();
+		for (RouteStop stop : routePlan.stops()) {
+			if (!feeList.isEmpty()) feeList.append(", ");
+			feeList.append(stop.town().getName()).append(" ").append(stop.cost()).append(" ").append(sign);
+		}
+
+		Msg.send(player, Component.text()
+				.append(Msg.PREFIX)
+				.append(Component.text("Fees: ", Msg.MUTED))
+				.append(Component.text(feeList.toString(), Msg.GOOD))
+				.build());
+	}
+
+	private static double getChunkDistanceBetweenPorts(@NotNull Port a, @NotNull Port b) {
+		Location aLocation = a.location();
+		Location bLocation = b.location();
+
+		if (aLocation.getWorld() == null || bLocation.getWorld() == null) {
+			return Double.MAX_VALUE;
+		}
+
+		if (!aLocation.getWorld().equals(bLocation.getWorld())) {
+			return Double.MAX_VALUE;
+		}
+
+		double deltaChunkX = aLocation.getChunk().getX() - bLocation.getChunk().getX();
+		double deltaChunkZ = aLocation.getChunk().getZ() - bLocation.getChunk().getZ();
+		return Math.sqrt((deltaChunkX * deltaChunkX) + (deltaChunkZ * deltaChunkZ));
 	}
 
 	private static Nation getPlayerNation(@NotNull Player player) {
@@ -447,8 +476,8 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 	private record RouteStop(Town town, double cost) {}
 
 	private record RoutePlan(List<RouteStop> stops, double totalCost) {
-		int legCount() {
-			return stops.size();
+		int intermediateStopCount() {
+			return Math.max(0, stops.size() - 1);
 		}
 	}
 
