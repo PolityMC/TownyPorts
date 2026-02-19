@@ -1,0 +1,165 @@
+general:
+  prefix: "&6[TownyPorts]&r "
+  usage-label: "Usage: "
+  copy:
+    coords: "Click to copy coords"
+    coords-suggest: "Click to copy (suggest) coords"
+  separator:
+    dot: "  •  "
+
+common:
+  error:
+    in-game-only: "This command can only be used in-game."
+    no-permission: "You do not have permission to use this."
+    failed-resident-relog: "Failed to load your Towny Resident record. Please relog."
+    no-town: "You do not belong to a town."
+
+help:
+  header:
+    commands: "Commands"
+  tip:
+    label: "Tip: "
+    copy-command: "Click a command to copy it."
+  command:
+    port: "Teleport to a town's port (requires being in a port chunk unless bypassed)."
+    price: "View a town's port fee."
+    list: "List all towns with active ports."
+    info: "Show your town's port details, or another town's."
+    here: "Show whether your current chunk is a port chunk (and whose)."
+    set-spawn: "Set your town's port spawn to your current location."
+    set-price: "Set your town's port fee."
+    set-remove: "Remove your town's port spawn + fee."
+
+set-port:
+  usage:
+    spawn: "/t set port spawn"
+    price: "/t set port price <amount>"
+    remove: "/t set port remove"
+  success:
+    spawn-set: "Port spawn set to your current location."
+    price-set: "Port fee for {0} set to {1} {2}."
+    removed: "Removed port settings for {0}."
+  error:
+    invalid-number: "Invalid number: {0}"
+    unknown-subcommand: "Unknown subcommand. Try /t set port help"
+    must-have-town-manage: "You must have a town to manage a town port."
+    no-permission-manage: "You do not have permission to manage town ports."
+    must-have-town-spawn: "You must have a town to set a town port."
+    no-permission-spawn: "You do not have permission to set the town port."
+    location-no-townblock: "This location has no associated town block."
+    only-own-town: "You can only set the port for your own town."
+    location-not-safe: "This location is not safe."
+    must-have-town-price: "You must have a town to set a town port price."
+    no-permission-price: "You do not have permission to set the town port price."
+    economy-disabled: "Economy is disabled."
+    fee-range: "Fee must be between {0} and {1}."
+
+port:
+  usage:
+    base: "/t port <destination-town>"
+    list: "/t port list [page]"
+    list-page: "/t port list <page>"
+    price: "/t port price <town>"
+    info-town: "/t port info <town>"
+    info-optional-town: "/t port info [town]"
+    here: "/t port here"
+
+  error:
+    town-no-port: "That town does not have a port."
+
+  reload:
+    success: "Reloaded configuration."
+    error:
+      failed: "Failed to reload config. Check console."
+
+  list:
+    error:
+      none-active: "No active ports found on the server."
+    header:
+      title: "Active ports "
+      total: "({0} total) "
+      page: "- Page {0}/{1}"
+    row:
+      tooltip: "{0} • {1} {2} • {3} ({4}, {5}, {6})"
+      price: "[{0} {1}]"
+      hover:
+        travel-to: "Click to travel to {0}"
+    footer:
+      use: "Use "
+      suffix: " to view other pages."
+
+  info:
+    fee-for-town: "Port fee for {0} is {1} {2}."
+    your-town-no-port: "Your town does not have a port set."
+    set-one-with: "Set one with "
+    title:
+      my-town-port: "Your town port"
+      town-port: "Port info"
+    label:
+      town: "• Town: "
+      fee: "• Fee: "
+      location: "• Location: "
+      travel: "• Travel: "
+    travel:
+      label: "Click to run /t port {0}"
+      hover: "Run the travel command"
+    error:
+      town-no-port: "{0} does not have a port set."
+
+  here:
+    title: "Port chunk check"
+    success:
+      in-port-chunk: "You are standing in this town's port chunk."
+    label:
+      port-spawn: "• Port spawn: "
+    travel:
+      list:
+        label: "Click to run /t port list"
+        hover: "Run the port list command"
+    error:
+      in-wilderness: "You are currently in the wilderness."
+      not-in-town: "You are not standing in a town."
+      town-no-port: "This town ({0}) does not have a port set."
+      not-port-chunk: "You are NOT standing in this town's port chunk."
+
+  hint:
+    label:
+      port-spawn: "Port spawn: "
+    check-here:
+      label: "Check with /t port here"
+      hover: "Check whether your current chunk is a port chunk"
+
+  travel:
+    cooldown: "Port cooldown: {0} seconds."
+    reason:
+      teleport: "TownyPorts teleport"
+      routed-payout: "TownyPorts routed traffic payout"
+    actionbar:
+      countdown: "Teleporting in {0}..."
+    pre:
+      will-pay: "You will pay "
+      to-travel: " to travel to "
+      via-stops: " via {0} stop(s)"
+      in-seconds: " in {0}s. "
+      do-not-move: "Don't move."
+    post:
+      arrived: "Arrived at the port."
+    error:
+      cannot-travel-now: "You cannot travel right now."
+      vehicle-not-allowed: "You can't teleport while riding this vehicle."
+      cannot-afford: "You cannot afford to travel to this port."
+      too-far: "That port is too far away to travel to."
+      failed-resident-contact-staff: "Failed to load your Towny Resident record. Please relog or contact staff."
+      no-nation: "You do not belong to a nation."
+      wilderness-denied: "You cannot port-travel from the wilderness."
+      enemy-denied: "You cannot port-travel to an enemy nation's ports."
+      must-stand-port-chunk: "You must be standing in the same chunk as a port spawn to travel."
+
+  route:
+    label:
+      route: "Route: "
+      stops: "Stops: "
+      fees: "Fees: "
+    part:
+      cost: " | cost {0} {1}"
+      via-stops: " | via {0} stop(s)"
