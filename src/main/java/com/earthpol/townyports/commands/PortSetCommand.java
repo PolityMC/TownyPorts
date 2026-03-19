@@ -5,7 +5,6 @@ import com.earthpol.townyports.config.Config;
 import com.earthpol.townyports.data.PortDAO;
 import com.earthpol.townyports.util.Msg;
 import com.palmergames.bukkit.towny.TownyAPI;
-import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.command.BaseCommand;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
@@ -30,14 +29,14 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
                              @NotNull String label, @NotNull String[] args) {
 
         if (!(sender instanceof Player player)) {
-            TownyMessaging.sendErrorMsg(sender, "This command can only be used in-game.");
+            Msg.error(sender, "common.error.in-game-only");
             return true;
         }
 
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            Msg.usage(player, Msg.plain("/t set port spawn").color(Msg.ACCENT));
-            Msg.usage(player, Msg.plain("/t set port price <amount>").color(Msg.ACCENT));
-            Msg.usage(player, Msg.plain("/t set port remove").color(Msg.ACCENT));
+            Msg.usage(player, "set-port.usage.spawn");
+            Msg.usage(player, "set-port.usage.price");
+            Msg.usage(player, "set-port.usage.remove");
             return true;
         }
 
@@ -52,13 +51,13 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
                 if (town == null) return true;
 
                 PortDAO.setPortSpawn(town, loc);
-                Msg.success(player, "Port spawn set to your current location.");
+                Msg.success(player, "set-port.success.spawn-set");
                 return true;
             }
 
             case "price": {
                 if (args.length != 2) {
-                    Msg.usage(player, Msg.plain("/t set port price <amount>").color(Msg.ACCENT));
+                    Msg.usage(player, "set-port.usage.price");
                     return true;
                 }
 
@@ -66,7 +65,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
                 try {
                     fee = Double.parseDouble(args[1]);
                 } catch (NumberFormatException e) {
-                    Msg.error(player, "Invalid number: " + args[1]);
+                    Msg.error(player, "set-port.error.invalid-number", args[1]);
                     return true;
                 }
 
@@ -74,7 +73,13 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
                 if (town == null) return true;
 
                 PortDAO.setPortPrice(town, fee);
-                Msg.success(player, "Port fee for " + town.getName() + " set to " + fee + " " + Config.CURRENCY_SIGN.getString() + ".");
+                Msg.success(
+                        player,
+                        "set-port.success.price-set",
+                        town.getName(),
+                        fee,
+                        Config.CURRENCY_SIGN.getString()
+                );
                 return true;
             }
 
@@ -83,12 +88,12 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
                 if (town == null) return true;
 
                 PortDAO.removePort(town);
-                Msg.success(player, "Removed port settings for " + town.getName() + ".");
+                Msg.success(player, "set-port.success.removed", town.getName());
                 return true;
             }
 
             default:
-                Msg.error(player, "Unknown subcommand. Try /t set port help");
+                Msg.error(player, "set-port.error.unknown-subcommand");
                 return true;
         }
     }
@@ -99,18 +104,18 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
     private static Town validateCanManagePort(@NotNull Player p) {
         Resident resident = TownyAPI.getInstance().getResident(p);
         if (resident == null) {
-            Msg.error(p, "Failed to load your Towny Resident record. Please relog.");
+            Msg.error(p, "common.error.failed-resident-relog");
             return null;
         }
 
         if (!resident.hasTown()) {
-            Msg.error(p, "You must have a town to manage a town port.");
+            Msg.error(p, "set-port.error.must-have-town-manage");
             return null;
         }
 
         boolean hasPermission = p.hasPermission("townyports.set.spawn") || p.hasPermission("townyports.set.price") || p.isOp();
         if (!hasPermission) {
-            Msg.error(p, "You do not have permission to manage town ports.");
+            Msg.error(p, "set-port.error.no-permission-manage");
             return null;
         }
 
@@ -123,37 +128,37 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
     private static Town validateCanSetPortSpawn(@NotNull Player p, @NotNull Location loc) {
         Resident resident = TownyAPI.getInstance().getResident(p);
         if (resident == null) {
-            Msg.error(p, "Failed to load your Towny Resident record. Please relog.");
+            Msg.error(p, "common.error.failed-resident-relog");
             return null;
         }
 
         if (!resident.hasTown()) {
-            Msg.error(p, "You must have a town to set a town port.");
+            Msg.error(p, "set-port.error.must-have-town-spawn");
             return null;
         }
 
         boolean hasPermission = p.hasPermission("townyports.set.spawn") || p.isOp();
         if (!hasPermission) {
-            Msg.error(p, "You do not have permission to set the town port.");
+            Msg.error(p, "set-port.error.no-permission-spawn");
             return null;
         }
 
         // Location must be inside your own town
         TownBlock locTownBlock = TownyAPI.getInstance().getTownBlock(WorldCoord.parseWorldCoord(loc));
         if (locTownBlock == null) {
-            Msg.error(p, "This location has no associated town block.");
+            Msg.error(p, "set-port.error.location-no-townblock");
             return null;
         }
 
         Town town = resident.getTownOrNull();
         if (town == null || locTownBlock.getTownOrNull() != town) {
-            Msg.error(p, "You can only set the port for your own town.");
+            Msg.error(p, "set-port.error.only-own-town");
             return null;
         }
 
         // Safety
         if (!LocationUtil.isSafeLocation(loc)) {
-            Msg.error(p, "This location is not safe.");
+            Msg.error(p, "set-port.error.location-not-safe");
             return null;
         }
 
@@ -167,24 +172,24 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
 
         Resident resident = TownyAPI.getInstance().getResident(p);
         if (resident == null) {
-            Msg.error(p, "Failed to load your Towny Resident record. Please relog.");
+            Msg.error(p, "common.error.failed-resident-relog");
             return null;
         }
 
         if (!resident.hasTown()) {
-            Msg.error(p, "You must have a town to set a town port price.");
+            Msg.error(p, "set-port.error.must-have-town-price");
             return null;
         }
 
 
         boolean hasPermission = p.hasPermission("townyports.set.price") || p.isOp();
         if (!hasPermission) {
-            Msg.error(p, "You do not have permission to set the town port price.");
+            Msg.error(p, "set-port.error.no-permission-price");
             return null;
         }
 
         if (!Config.USES_ECONOMY.getBool()) {
-            Msg.error(p, "Economy is disabled.");
+            Msg.error(p, "set-port.error.economy-disabled");
             return null;
         }
 
@@ -192,7 +197,7 @@ public class PortSetCommand extends BaseCommand implements CommandExecutor, TabC
         int max = Config.MAXIMUM_PORT_FEE.getInt();
 
         if (price < min || price > max) {
-            Msg.error(p, "Fee must be between " + min + " and " + max + ".");
+            Msg.error(p, "set-port.error.fee-range", min, max);
             return null;
         }
 

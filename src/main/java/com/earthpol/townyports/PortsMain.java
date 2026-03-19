@@ -2,6 +2,7 @@ package com.earthpol.townyports;
 
 import com.earthpol.earthPolLib.config.ReloadableConfigHandler;
 import com.earthpol.earthPolLib.logging.EnhancedLogger;
+import com.earthpol.earthPolLib.translation.TranslationService;
 import com.earthpol.townyports.commands.PortBaseCommand;
 import com.earthpol.townyports.commands.PortCommand;
 import com.earthpol.townyports.commands.PortSetCommand;
@@ -20,6 +21,8 @@ public final class PortsMain extends JavaPlugin {
     public static EnhancedLogger log() { return logger; }
 
     public static String PREFIX;
+    private static TranslationService translationService;
+    public static TranslationService getTranslationService() { return translationService; }
 
     // Config
     public static ReloadableConfigHandler<Config> reloadableConfigHandler;
@@ -46,6 +49,15 @@ public final class PortsMain extends JavaPlugin {
             reloadableConfigHandler = new ReloadableConfigHandler<>(this, "config.yml", Config.class);
         } catch (IOException e) {
             log().severe("Failed to load config file! Shutting down.", e);
+            this.setEnabled(false);
+            return;
+        }
+
+        try {
+            translationService = new TranslationService(this, PortsMain.class);
+            translationService.load();
+        } catch (Exception e) {
+            log().severe("Failed to load translations! Shutting down.", e);
             this.setEnabled(false);
             return;
         }

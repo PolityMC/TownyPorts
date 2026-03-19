@@ -19,8 +19,6 @@ import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.WorldCoord;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
@@ -38,6 +36,7 @@ import java.util.*;
 public class PortCommand extends BaseCommand implements CommandExecutor {
 
 	private static final PlayerCooldownManager portsCooldownManager = new PlayerCooldownManager();
+	private static final String MUST_STAND_PORT_CHUNK_KEY = "port.travel.error.must-stand-port-chunk";
 
 	public PortCommand() {}
 
@@ -46,12 +45,12 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 							 @NotNull String label, @NotNull String @NotNull [] args) {
 
 		if(!(sender instanceof Player p)) {
-			Msg.error(sender, "This command can only be used in-game.");
+			Msg.error(sender, "common.error.in-game-only");
 			return true;
 		}
 
 		if (args.length == 0) {
-			Msg.usage(p, Component.text("/t port <destination-town>", Msg.ACCENT));
+			Msg.usage(p, "port.usage.base");
 			return true;
 		}
 
@@ -60,13 +59,13 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		try {
 			destinationTown = getTownOrThrow(args[0]);
 		} catch (TownyException e) {
-			Msg.error(p, e.getMessage());
+			Msg.errorRaw(p, e.getMessage());
 			return true;
 		}
 
 		final Port destinationPort = PortDAO.getPort(destinationTown);
 		if (destinationPort == null) {
-			Msg.error(p, "That town does not have a port.");
+			Msg.error(p, "port.error.town-no-port");
 			return true;
 		}
 
@@ -74,12 +73,16 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			checkTeleportEligibility(p, destinationTown);
 		} catch (TownyException e) {
 
-			String msg = e.getMessage();
-			Msg.error(p, msg != null ? msg : "You cannot travel right now.");
+			String messageKey = e.getMessage();
+			if (messageKey != null) {
+				Msg.error(p, messageKey);
+			} else {
+				Msg.error(p, "port.travel.error.cannot-travel-now");
+			}
 
 			// For the "must be standing in the same chunk as a port spawn" error,
 			// show ONE compact follow-up line with coords + /t port here shortcut.
-			if (msg != null && msg.startsWith("You must be standing in the same chunk as a port spawn")) {
+			if (MUST_STAND_PORT_CHUNK_KEY.equals(messageKey)) {
 				sendOriginPortHintIfPossible(p);
 			}
 
@@ -89,7 +92,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		// Vehicle restrictions
 		if (VehicleUtil.isOnboardVehicle(p)) {
 			if (!(p.getVehicle() instanceof Vehicle v) || !VehicleRegistry.isAllowedVehicle(v)) {
-				Msg.error(p, "You can't teleport while riding this vehicle.");
+				Msg.error(p, "port.travel.error.vehicle-not-allowed");
 				return true;
 			}
 		}
@@ -99,7 +102,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		TeleportOutcomeHandler handler = new TeleportOutcomeHandler();
 		handler.setOnFailedUnaffordable(context ->
-				Msg.error(context.getPlayer(), "You cannot afford to travel to this port.")
+				Msg.error(context.getPlayer(), "port.travel.error.cannot-afford")
 		);
 
 		long warmupTicks = Config.PORT_TRAVEL_WARMUP_IN_TICKS.getLong();
@@ -108,14 +111,14 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		RoutePlan routePlan = buildRoutePlan(p, destinationPort);
 		if (routePlan == null) {
-			Msg.error(p, "That port is too far away to travel to.");
+			Msg.error(p, "port.travel.error.too-far");
 			return true;
 		}
 
 		double travelCost = routePlan.totalCost();
 
 		if (!hasSufficientBalance(p, travelCost)) {
-			Msg.error(p, "You cannot afford to travel to this port.");
+			Msg.error(p, "port.travel.error.cannot-afford");
 			return true;
 		}
 
@@ -124,20 +127,20 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 				.preTeleportMessage(
 						Component.text()
-								.append(Msg.PREFIX)
-								.append(Component.text("You will pay ", NamedTextColor.WHITE))
+								.append(Msg.prefix(p))
+								.append(Component.text(Msg.tr(p, "port.travel.pre.will-pay"), NamedTextColor.WHITE))
 								.append(Component.text(travelCost + " " + sign, Msg.GOOD))
-								.append(Component.text(" to travel to ", NamedTextColor.WHITE))
+								.append(Component.text(Msg.tr(p, "port.travel.pre.to-travel"), NamedTextColor.WHITE))
 								.append(Component.text(destinationPort.getName(), Msg.ACCENT))
-								.append(Component.text(" via " + routePlan.intermediateStopCount() + " stop(s)", NamedTextColor.WHITE))
-								.append(Component.text(" in " + warmupSeconds + "s. ", NamedTextColor.WHITE))
-								.append(Component.text("Don't move.", Msg.MUTED))
+								.append(Component.text(Msg.tr(p, "port.travel.pre.via-stops", routePlan.intermediateStopCount()), NamedTextColor.WHITE))
+								.append(Component.text(Msg.tr(p, "port.travel.pre.in-seconds", warmupSeconds), NamedTextColor.WHITE))
+								.append(Component.text(Msg.tr(p, "port.travel.pre.do-not-move"), Msg.MUTED))
 								.build()
 				)
 				.postTeleportMessage(
 						Component.text()
-								.append(Msg.PREFIX)
-								.append(Component.text("Arrived at the port.", Msg.GOOD))
+								.append(Msg.prefix(p))
+								.append(Component.text(Msg.tr(p, "port.travel.post.arrived"), Msg.GOOD))
 								.build()
 				)
 
@@ -150,7 +153,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		// Cooldown
 		if (portsCooldownManager.hasCooldown(p)) {
-			Msg.warn(p, "Port cooldown: " + portsCooldownManager.getCooldown(p) + " seconds.");
+			Msg.warn(p, "port.travel.cooldown", portsCooldownManager.getCooldown(p));
 			return true;
 		}
 
@@ -159,7 +162,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				destinationPort.location(),
 				travelCost,
 				destinationTown.getAccount(),
-				"TownyPorts teleport"
+				Msg.tr("port.travel.reason.teleport")
 		);
 
 		sendRouteSummary(p, routePlan, sign);
@@ -176,7 +179,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 			Bukkit.getScheduler().runTaskLater(PortsMain.instance, () -> {
 				if (!player.isOnline()) return;
-				player.sendActionBar(Component.text("Teleporting in " + countdownSecond + "...", Msg.ACCENT));
+				player.sendActionBar(Component.text(Msg.tr(player, "port.travel.actionbar.countdown", countdownSecond), Msg.ACCENT));
 			}, delay);
 		}
 	}
@@ -205,7 +208,7 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			if (stop.town().equals(destinationTown)) continue;
 			try {
 				Object stopAccount = stop.town().getAccount();
-				payBetweenAccounts(destinationAccount, stopAccount, stop.cost(), "TownyPorts routed traffic payout");
+				payBetweenAccounts(destinationAccount, stopAccount, stop.cost(), Msg.tr("port.travel.reason.routed-payout"));
 			} catch (Exception ignored) {
 				// Keep travel successful even if account redistribution fails for a specific stop.
 			}
@@ -251,26 +254,15 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		int z = l.getBlockZ();
 
 		// This is what we "copy" into chat: "x y z"
-		String raw = x + " " + y + " " + z;
-
-		Component coords = Component.text()
-				.append(Component.text("X ", Msg.MUTED))
-				.append(Component.text(x, Msg.ACCENT))
-				.append(Component.text("  Y ", Msg.MUTED))
-				.append(Component.text(y, Msg.ACCENT))
-				.append(Component.text("  Z ", Msg.MUTED))
-				.append(Component.text(z, Msg.ACCENT))
-				.hoverEvent(HoverEvent.showText(Component.text("Click to copy coords", NamedTextColor.WHITE)))
-				.clickEvent(ClickEvent.suggestCommand(raw))
-				.build();
+		Component coords = Msg.styledCoords(p, x, y, z);
 
 		Msg.send(p, Component.text()
-				.append(Msg.PREFIX)
-				.append(Component.text("Port spawn: ", Msg.MUTED))
+				.append(Msg.prefix(p))
+				.append(Component.text(Msg.tr(p, "port.hint.label.port-spawn"), Msg.MUTED))
 				.append(coords)
-				.append(Component.text("  •  ", Msg.MUTED))
-				.append(Msg.runCmd("Check with /t port here", "/t port here",
-						"Check whether your current chunk is a port chunk"))
+				.append(Component.text(Msg.tr(p, "general.separator.dot"), Msg.MUTED))
+				.append(Msg.runCmd(Msg.tr(p, "port.hint.check-here.label"), "/t port here",
+						Msg.tr(p, "port.hint.check-here.hover")))
 				.build()
 		);
 	}
@@ -285,23 +277,23 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		Resident playerResident = townyAPI.getResident(player);
 		if (playerResident == null) {
-			throw new TownyException("Failed to load your Towny Resident record. Please relog or contact staff.");
+			throw new TownyException("port.travel.error.failed-resident-contact-staff");
 		}
 
 		Town playerTown = playerResident.getTownOrNull();
 		if (playerTown == null) {
-			throw new TownyException("You do not belong to a town.");
+			throw new TownyException("common.error.no-town");
 		}
 
 		if (!playerTown.hasNation()) {
-			throw new TownyException("You do not belong to a nation.");
+			throw new TownyException("port.travel.error.no-nation");
 		}
 
 		Nation playerNation = playerTown.getNationOrNull();
 
 		// Wilderness restriction
 		if (!player.hasPermission("townyports.bypass.wilderness") && townyAPI.isWilderness(player.getLocation())) {
-			throw new TownyException("You cannot port-travel from the wilderness.");
+			throw new TownyException("port.travel.error.wilderness-denied");
 		}
 
 		// Enemy restriction
@@ -310,12 +302,12 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 				playerNation != null &&
 				destinationNation.hasEnemy(playerNation) &&
 				Config.PORT_TRAVEL_DENIES_FOR_ENEMIES.getBool()) {
-			throw new TownyException("You cannot port-travel to an enemy nation's ports.");
+			throw new TownyException("port.travel.error.enemy-denied");
 		}
 
 		// Must start in a port chunk
 		if (!isPlayerStandingInPortChunk(player)) {
-			throw new TownyException("You must be standing in the same chunk as a port spawn to travel.");
+			throw new TownyException(MUST_STAND_PORT_CHUNK_KEY);
 		}
 	}
 
@@ -419,18 +411,18 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 
 		RouteStop finalStop = routePlan.stops().get(routePlan.stops().size() - 1);
 		Component message = Component.text()
-				.append(Msg.PREFIX)
-				.append(Component.text("Route: ", Msg.MUTED))
+				.append(Msg.prefix(player))
+				.append(Component.text(Msg.tr(player, "port.route.label.route"), Msg.MUTED))
 				.append(Component.text(finalStop.town().getName(), Msg.ACCENT))
-				.append(Component.text(" | cost " + routePlan.totalCost() + " " + sign, Msg.GOOD))
-				.append(Component.text(" | via " + routePlan.intermediateStopCount() + " stop(s)", NamedTextColor.WHITE))
+				.append(Component.text(Msg.tr(player, "port.route.part.cost", routePlan.totalCost(), sign), Msg.GOOD))
+				.append(Component.text(Msg.tr(player, "port.route.part.via-stops", routePlan.intermediateStopCount()), NamedTextColor.WHITE))
 				.build();
 		Msg.send(player, message);
 
 		if (stopList.length() > 0) {
 			Msg.send(player, Component.text()
-					.append(Msg.PREFIX)
-					.append(Component.text("Stops: ", Msg.MUTED))
+					.append(Msg.prefix(player))
+					.append(Component.text(Msg.tr(player, "port.route.label.stops"), Msg.MUTED))
 					.append(Component.text(stopList.toString(), Msg.ACCENT))
 					.build());
 		}
@@ -442,8 +434,8 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		Msg.send(player, Component.text()
-				.append(Msg.PREFIX)
-				.append(Component.text("Fees: ", Msg.MUTED))
+				.append(Msg.prefix(player))
+				.append(Component.text(Msg.tr(player, "port.route.label.fees"), Msg.MUTED))
 				.append(Component.text(feeList.toString(), Msg.GOOD))
 				.build());
 	}
