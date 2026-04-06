@@ -153,6 +153,7 @@ port:
       no-nation: "You do not belong to a nation."
       wilderness-denied: "You cannot port-travel from the wilderness."
       enemy-denied: "You cannot port-travel to an enemy nation's ports."
+      outlaw-denied: "You cannot port-travel to a town that has outlawed you."
       must-stand-port-chunk: "You must be standing in the same chunk as a port spawn to travel."
 
   route:

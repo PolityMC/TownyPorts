@@ -305,6 +305,11 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 			throw new TownyException("port.travel.error.enemy-denied");
 		}
 
+		// Outlaw restriction
+		if (destinationTown.hasOutlaw(playerResident)) {
+			throw new TownyException("port.travel.error.outlaw-denied");
+		}
+
 		// Must start in a port chunk
 		if (!isPlayerStandingInPortChunk(player)) {
 			throw new TownyException(MUST_STAND_PORT_CHUNK_KEY);
