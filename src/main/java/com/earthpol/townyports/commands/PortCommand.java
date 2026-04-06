@@ -116,40 +116,44 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		}
 
 		double travelCost = routePlan.totalCost();
+		boolean requiresTravelConfirmation = travelCost > 0D;
+		long effectiveWarmupTicks = requiresTravelConfirmation ? warmupTicks : 0L;
 
 		if (!hasSufficientBalance(p, travelCost)) {
 			Msg.error(p, "port.travel.error.cannot-afford");
 			return true;
 		}
 
-		Teleporter portsTeleporter = Teleporter.builder(PortsMain.instance)
+		Teleporter.Builder portsTeleporterBuilder = Teleporter.builder(PortsMain.instance)
 				.setVehicleTeleporter(portsVehicleTeleporter)
-
-				.preTeleportMessage(
-						Component.text()
-								.append(Msg.prefix(p))
-								.append(Component.text(Msg.tr(p, "port.travel.pre.will-pay"), NamedTextColor.WHITE))
-								.append(Component.text(travelCost + " " + sign, Msg.GOOD))
-								.append(Component.text(Msg.tr(p, "port.travel.pre.to-travel"), NamedTextColor.WHITE))
-								.append(Component.text(destinationPort.getName(), Msg.ACCENT))
-								.append(Component.text(Msg.tr(p, "port.travel.pre.via-stops", routePlan.intermediateStopCount()), NamedTextColor.WHITE))
-								.append(Component.text(Msg.tr(p, "port.travel.pre.in-seconds", warmupSeconds), NamedTextColor.WHITE))
-								.append(Component.text(Msg.tr(p, "port.travel.pre.do-not-move"), Msg.MUTED))
-								.build()
-				)
 				.postTeleportMessage(
 						Component.text()
 								.append(Msg.prefix(p))
 								.append(Component.text(Msg.tr(p, "port.travel.post.arrived"), Msg.GOOD))
 								.build()
 				)
-
-				.enableWarmup(warmupTicks)
 				.enableDestinationSafety()
 				.disablePreTeleportMovement()
-				.setOutcomeHandler(handler)
+				.setOutcomeHandler(handler);
 
-				.build();
+		if (requiresTravelConfirmation) {
+			portsTeleporterBuilder
+					.preTeleportMessage(
+							Component.text()
+									.append(Msg.prefix(p))
+									.append(Component.text(Msg.tr(p, "port.travel.pre.will-pay"), NamedTextColor.WHITE))
+									.append(Component.text(travelCost + " " + sign, Msg.GOOD))
+									.append(Component.text(Msg.tr(p, "port.travel.pre.to-travel"), NamedTextColor.WHITE))
+									.append(Component.text(destinationPort.getName(), Msg.ACCENT))
+									.append(Component.text(Msg.tr(p, "port.travel.pre.via-stops", routePlan.intermediateStopCount()), NamedTextColor.WHITE))
+									.append(Component.text(Msg.tr(p, "port.travel.pre.in-seconds", warmupSeconds), NamedTextColor.WHITE))
+									.append(Component.text(Msg.tr(p, "port.travel.pre.do-not-move"), Msg.MUTED))
+									.build()
+					)
+					.enableWarmup(warmupTicks);
+		}
+
+		Teleporter portsTeleporter = portsTeleporterBuilder.build();
 
 		// Cooldown
 		if (portsCooldownManager.hasCooldown(p)) {
@@ -166,8 +170,10 @@ public class PortCommand extends BaseCommand implements CommandExecutor {
 		);
 
 		sendRouteSummary(p, routePlan, sign);
-		startTeleportCountdown(p, warmupTicks);
-		scheduleCooldownOnSuccessfulTeleport(p, destinationPort.location(), warmupTicks, destinationTown, routePlan);
+		if (effectiveWarmupTicks > 0) {
+			startTeleportCountdown(p, effectiveWarmupTicks);
+		}
+		scheduleCooldownOnSuccessfulTeleport(p, destinationPort.location(), effectiveWarmupTicks, destinationTown, routePlan);
 		return true;
 	}
 
